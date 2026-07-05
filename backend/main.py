@@ -21,6 +21,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 import cognee_client
+import insights
 from config import FRONTEND_ORIGIN, assert_configured
 from ingestion import ics_to_memory_text
 from models import (
@@ -75,6 +76,7 @@ async def health() -> dict:
 async def ingest_text(req: IngestTextReq) -> StatusResp:
     try:
         result = await cognee_client.remember_text(req.text, req.dataset_name)
+        insights.invalidate()
         return StatusResp(status=f"Remembered into '{req.dataset_name}'", detail=result)
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_text", e)
@@ -93,6 +95,7 @@ async def ingest_file(
         result = await cognee_client.remember_file(
             tmp_path, dataset_name=dataset_name, filename=file.filename
         )
+        insights.invalidate()
         return StatusResp(status=f"Remembered file into '{dataset_name}'", detail=result)
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_file", e)
@@ -108,6 +111,7 @@ async def ingest_calendar(req: CalendarReq) -> StatusResp:
         if not memory_text.strip():
             raise ValueError("No events parsed from ICS content.")
         result = await cognee_client.remember_text(memory_text, req.dataset_name)
+        insights.invalidate()
         return StatusResp(status=f"Remembered calendar into '{req.dataset_name}'", detail=result)
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_calendar", e)
@@ -132,6 +136,7 @@ async def improve(req: ImproveReq | None = None) -> StatusResp:
     try:
         datasets = req.datasets if req else None
         result = await cognee_client.improve(datasets)
+        insights.invalidate()
         return StatusResp(status="Memory improved (graph re-enriched)", detail=result)
     except Exception as e:  # noqa: BLE001
         raise _handle("improve", e)
@@ -154,8 +159,76 @@ async def forget(name_or_id: str) -> StatusResp:
         if not dataset_id:
             raise HTTPException(status_code=404, detail=f"Dataset '{name_or_id}' not found")
         result = await cognee_client.forget_dataset(dataset_id)
+        insights.invalidate()
         return StatusResp(status=f"Forgot dataset '{name_or_id}'", detail=result)
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001
         raise _handle("forget", e)
+
+
+@app.delete("/vault", response_model=StatusResp)
+async def delete_vault() -> StatusResp:
+    """Delete every dataset — the Settings 'Delete my vault' action."""
+    try:
+        datasets_ = await cognee_client.list_datasets()
+        deleted = 0
+        for d in datasets_:
+            if d["id"]:
+                await cognee_client.forget_dataset(d["id"])
+                deleted += 1
+        insights.invalidate()
+        return StatusResp(status=f"Vault deleted ({deleted} datasets forgotten)")
+    except Exception as e:  # noqa: BLE001
+        raise _handle("delete_vault", e)
+
+
+@app.get("/export")
+async def export_vault() -> dict:
+    """Dump all datasets + their data items as JSON (Settings 'Export')."""
+    try:
+        out = []
+        for d in await cognee_client.list_datasets():
+            items = await cognee_client.list_dataset_data(d["id"]) if d["id"] else []
+            out.append({"dataset": d["name"], "id": d["id"], "data": items})
+        return {"datasets": out}
+    except Exception as e:  # noqa: BLE001
+        raise _handle("export", e)
+
+
+# ------------------------------ Insights (dynamic) ------------------------------ #
+@app.get("/people")
+async def people() -> list[dict]:
+    try:
+        return await insights.get_people()
+    except Exception as e:  # noqa: BLE001
+        raise _handle("people", e)
+
+
+@app.get("/people/{name}")
+async def person(name: str) -> dict:
+    try:
+        result = await insights.get_person(name)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"No memories about '{name}'")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        raise _handle("person", e)
+
+
+@app.get("/timeline")
+async def timeline() -> list[dict]:
+    try:
+        return await insights.get_timeline()
+    except Exception as e:  # noqa: BLE001
+        raise _handle("timeline", e)
+
+
+@app.get("/graph")
+async def graph() -> dict:
+    try:
+        return await insights.get_entity_graph()
+    except Exception as e:  # noqa: BLE001
+        raise _handle("graph", e)

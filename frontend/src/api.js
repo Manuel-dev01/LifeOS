@@ -27,4 +27,14 @@ export const getDatasets = () => api.get('/datasets')
 
 export const getHealth = () => api.get('/health')
 
+// Dynamic insight endpoints (extracted from real memories)
+export const getPeople = () => api.get('/people')
+export const getPerson = (name) => api.get(`/people/${encodeURIComponent(name)}`)
+export const getTimeline = () => api.get('/timeline')
+export const getGraph = () => api.get('/graph')
+
+// Settings
+export const deleteVault = () => api.delete('/vault')
+export const exportVault = () => api.get('/export')
+
 export default api

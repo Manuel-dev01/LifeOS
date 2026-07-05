@@ -18,6 +18,14 @@ backend/smoke_test.py
 backend/verify_recall.py
 backend/debug_*.py
 
+# Non-product files (internal docs, drafts, design mockups)
+CLAUDE.md
+BLOG.md
+SOCIAL.md
+DEMO.md
+LifeOS Landing.dc.html
+LifeOS App Flow.dc.html
+
 # OS
 .DS_Store
 Thumbs.db

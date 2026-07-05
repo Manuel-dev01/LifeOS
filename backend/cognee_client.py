@@ -15,6 +15,7 @@ need and degrade gracefully.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Optional
 
@@ -154,6 +155,105 @@ async def recall(
     return _normalize_search(data, question)
 
 
+async def search_structured(
+    query: str,
+    system_prompt: str,
+    datasets: Optional[list[str]] = None,
+    top_k: int = 40,
+) -> Any:
+    """Run a GRAPH_COMPLETION search with a custom systemPrompt and parse the
+    answer as JSON. Used to make the tenant LLM extract structured data
+    (people, timeline, entity graph) from the REAL ingested memories.
+
+    Returns the parsed JSON (list or dict), or None if nothing parseable came
+    back. Aggregates across datasets (the tenant answers per-dataset).
+    """
+    payload: dict[str, Any] = {
+        "query": query,
+        "searchType": "GRAPH_COMPLETION",
+        "topK": top_k,
+        "systemPrompt": system_prompt,
+    }
+    if datasets:
+        payload["datasets"] = datasets
+    async with _client() as client:
+        resp = await client.post(_url("/search"), json=payload)
+        _raise_for_status(resp, "search(structured)")
+        data = _json_or_empty(resp)
+
+    # Collect every per-dataset answer string, parse each as JSON, merge.
+    results = data if isinstance(data, list) else data.get("results", [data])
+    parsed_items: list[Any] = []
+    for item in results or []:
+        answer = _extract_answer(
+            item.get("search_result", item) if isinstance(item, dict) else item
+        )
+        parsed = _parse_json_loose(answer)
+        if parsed is not None:
+            parsed_items.append(parsed)
+    return _merge_structured(parsed_items)
+
+
+def _parse_json_loose(text: str) -> Any:
+    """Best-effort JSON parse: strip code fences and surrounding prose."""
+    if not text or not isinstance(text, str):
+        return None
+    s = text.strip()
+    # Strip ```json ... ``` fences.
+    if s.startswith("```"):
+        s = s.split("```", 2)
+        s = s[1] if len(s) > 1 else text
+        if s.lstrip().lower().startswith("json"):
+            s = s.lstrip()[4:]
+    s = s.strip()
+    # Try direct parse, then a substring from first bracket to last.
+    for candidate in (s, _bracket_slice(s)):
+        if not candidate:
+            continue
+        try:
+            return json.loads(candidate)
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
+def _bracket_slice(s: str) -> str:
+    starts = [i for i in (s.find("["), s.find("{")) if i != -1]
+    ends = [i for i in (s.rfind("]"), s.rfind("}")) if i != -1]
+    if not starts or not ends:
+        return ""
+    return s[min(starts) : max(ends) + 1]
+
+
+def _merge_structured(items: list[Any]) -> Any:
+    """Merge per-dataset parsed JSON. Lists concatenate; dicts shallow-merge."""
+    if not items:
+        return None
+    if all(isinstance(i, list) for i in items):
+        merged: list[Any] = []
+        for lst in items:
+            merged.extend(lst)
+        return merged
+    if all(isinstance(i, dict) for i in items):
+        out: dict[str, Any] = {}
+        for d in items:
+            for k, v in d.items():
+                # Concatenate list-valued keys (e.g. graph nodes/edges) across
+                # per-dataset results instead of overwriting.
+                if isinstance(v, list) and isinstance(out.get(k), list):
+                    out[k].extend(v)
+                elif isinstance(v, list):
+                    out[k] = list(v)
+                else:
+                    out.setdefault(k, v)
+        return out
+    # Mixed — prefer the first list, else the first item.
+    for i in items:
+        if isinstance(i, list):
+            return i
+    return items[0]
+
+
 def graph_from_recall(question: str, recall_result: dict[str, Any]) -> dict[str, Any]:
     """Build a 'memory map' graph from a recall result — no extra network call.
 
@@ -205,6 +305,21 @@ async def list_datasets() -> list[dict[str, Any]]:
             }
         )
     return result
+
+
+async def list_dataset_data(dataset_id: str) -> list[dict[str, Any]]:
+    """Return the data items stored in a dataset (for export)."""
+    async with _client() as client:
+        resp = await client.get(_url(f"/datasets/{dataset_id}/data"))
+        if not resp.is_success:
+            logger.warning("list_dataset_data %s -> %s", dataset_id, resp.status_code)
+            return []
+        data = _json_or_empty(resp)
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        return data.get("data", data.get("items", []))
+    return []
 
 
 async def resolve_dataset_id(name_or_id: str) -> Optional[str]:
