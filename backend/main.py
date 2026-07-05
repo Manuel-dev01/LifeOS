@@ -13,6 +13,7 @@ Endpoints (per CLAUDE.md contract):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import tempfile
@@ -73,10 +74,19 @@ def _handle(action: str, e: Exception) -> HTTPException:
 # ------------------------------ Health ------------------------------ #
 @app.get("/health")
 async def health() -> dict:
+    """Always fast, always 200 while the process is up.
+
+    The service is healthy even when the Cognee tenant is momentarily slow, so
+    we probe the tenant with a SHORT timeout and report it as a sub-status
+    rather than blocking on the 120s tenant client (which made /health hang and
+    502, risking a platform restart loop).
+    """
     try:
-        return await cognee_client.ping()
+        info = await asyncio.wait_for(cognee_client.ping(), timeout=6.0)
+        return {"ok": True, "tenant": "up", **info}
     except Exception as e:  # noqa: BLE001
-        raise _handle("health", e)
+        logger.warning("health: tenant probe failed: %s", e)
+        return {"ok": True, "tenant": "unreachable", "error": type(e).__name__}
 
 
 # ------------------------------ Ingest ------------------------------ #
