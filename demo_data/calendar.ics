@@ -1,0 +1,28 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//LifeOS//Demo Calendar//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:budget-meeting-001@company.com
+SUMMARY:Budget Finalization Meeting
+DTSTART:20260710T150000
+DTEND:20260710T160000
+LOCATION:Room 4B
+ORGANIZER:MAILTO:alice@company.com
+ATTENDEE:MAILTO:alice@company.com
+ATTENDEE:MAILTO:bob@company.com
+ATTENDEE:MAILTO:charlie@company.com
+DESCRIPTION:Confirm the Q3 marketing budget allocation of $45k.
+END:VEVENT
+BEGIN:VEVENT
+UID:sprint-planning-002@company.com
+SUMMARY:Sprint Planning
+DTSTART:20260713T100000
+DTEND:20260713T110000
+LOCATION:Room 2A
+ORGANIZER:MAILTO:alice@company.com
+ATTENDEE:MAILTO:alice@company.com
+ATTENDEE:MAILTO:bob@company.com
+DESCRIPTION:Plan the next sprint and review influencer campaign tasks.
+END:VEVENT
+END:VCALENDAR

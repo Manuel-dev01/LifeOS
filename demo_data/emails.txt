@@ -1,0 +1,32 @@
+From: Alice <alice@company.com>
+To: Team
+Subject: Q3 Marketing Budget
+Team, we need to finalize the Q3 marketing budget by Friday. The currently proposed number is $50k. Please share your input before then.
+
+---
+
+From: Bob <bob@company.com>
+To: Team
+Subject: Re: Q3 Marketing Budget
+I think we should allocate more to influencer campaigns, at least $20k. Influencers are driving most of our new signups this quarter.
+
+---
+
+From: Charlie <charlie@company.com>
+To: Team
+Subject: Re: Q3 Marketing Budget
+Finance update: we actually only have $45k total available for Q3, not $50k. Let's cut the print ads to stay within budget.
+
+---
+
+From: Alice <alice@company.com>
+To: Team
+Subject: Budget Finalization Meeting
+Thanks all. The final agreed marketing budget for Q3 is $45k based on Charlie's finance numbers. A meeting is scheduled for Friday 3pm to confirm the allocation.
+
+---
+
+From: Bob <bob@company.com>
+To: Team
+Subject: Venue change for Friday
+Quick note: the venue for Friday's budget meeting has changed to Room 4B. Please remember to bring the campaign mockups.
