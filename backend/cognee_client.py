@@ -15,6 +15,7 @@ need and degrade gracefully.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, Optional
@@ -161,7 +162,13 @@ async def _cognify(
 async def recall(
     question: str, top_k: int = 8, datasets: Optional[list[str]] = None
 ) -> dict[str, Any]:
-    """Query memory. Returns {'answer': str, 'sources': [{text, source, score}]}."""
+    """Query memory. Returns {'answer': str, 'sources': [{text, source, score}]}.
+
+    The tenant runs GRAPH_COMPLETION once per dataset and its LLM serializes at
+    ~13s/call, so latency scales with the number of datasets. A single call over
+    all datasets is the tenant's own (serialized) fast path; keeping the vault
+    lean (few, meaningful datasets) is what keeps recall snappy.
+    """
     payload: dict[str, Any] = {
         "query": question,
         "searchType": "GRAPH_COMPLETION",

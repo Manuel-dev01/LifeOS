@@ -142,7 +142,7 @@ async def query(req: QueryReq) -> QueryResp:
         # Bound the recall so a degraded/slow tenant returns a clear message
         # fast instead of hanging the UI for two minutes.
         result = await asyncio.wait_for(
-            cognee_client.recall(req.question, top_k=req.top_k), timeout=55.0
+            cognee_client.recall(req.question, top_k=req.top_k), timeout=85.0
         )
         graph = None
         if req.include_graph:
