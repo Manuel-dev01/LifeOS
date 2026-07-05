@@ -107,14 +107,24 @@ def _credentials() -> Credentials | None:
 # Fetchers → prose lists
 # --------------------------------------------------------------------------- #
 def fetch_all(creds: Credentials) -> dict[str, list[str]]:
-    """Return {'gmail': [...], 'calendar': [...], 'drive': [...]}."""
+    """Return {'gmail': [...], 'calendar': [...], 'drive': [...]}.
+
+    A single source failing (e.g. Drive API not enabled) is tolerated. But if
+    EVERY source errors, that's a real auth/scope problem (expired token,
+    revoked grant) masquerading as an empty result, so raise instead of
+    reporting a bogus "connected, 0 items" success to the UI.
+    """
     out: dict[str, list[str]] = {}
+    errors: dict[str, str] = {}
     for name, fn in (("gmail", fetch_gmail), ("calendar", fetch_calendar), ("drive", fetch_drive)):
         try:
             out[name] = fn(creds)
         except Exception as e:  # noqa: BLE001
             logger.warning("google fetch %s failed: %s", name, e)
             out[name] = []
+            errors[name] = str(e)
+    if len(errors) == 3:
+        raise RuntimeError(f"Google fetch failed for all sources: {next(iter(errors.values()))}")
     return out
 
 

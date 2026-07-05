@@ -62,13 +62,22 @@ async def fetch_messages(channel_limit: int = 3, msg_limit: int = 20) -> list[st
             "https://slack.com/api/conversations.list",
             params={"types": "public_channel", "limit": channel_limit},
         )
-        for ch in chans.json().get("channels", [])[:channel_limit]:
+        cdata = chans.json()
+        if not cdata.get("ok"):
+            # A scope/auth error (missing_scope, invalid_auth) would otherwise
+            # look identical to an empty workspace. Surface it.
+            raise RuntimeError(f"Slack error: {cdata.get('error')}")
+        for ch in cdata.get("channels", [])[:channel_limit]:
             hist = await client.get(
                 "https://slack.com/api/conversations.history",
                 params={"channel": ch["id"], "limit": msg_limit},
             )
+            hdata = hist.json()
             cname = ch.get("name", "channel")
-            for m in hist.json().get("messages", []):
+            if not hdata.get("ok"):
+                logger.warning("slack history #%s: %s", cname, hdata.get("error"))
+                continue
+            for m in hdata.get("messages", []):
                 text = (m.get("text") or "").strip()
                 if text:
                     out.append(f"Slack message in #{cname}: {text[:800]}")

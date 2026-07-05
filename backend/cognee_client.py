@@ -246,8 +246,12 @@ def _bracket_slice(s: str) -> str:
     return s[min(starts) : max(ends) + 1]
 
 
+def _is_number(v: Any) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
 def _merge_structured(items: list[Any]) -> Any:
-    """Merge per-dataset parsed JSON. Lists concatenate; dicts shallow-merge."""
+    """Merge per-dataset parsed JSON. Lists concatenate; numeric scalars sum."""
     if not items:
         return None
     if all(isinstance(i, list) for i in items):
@@ -265,8 +269,14 @@ def _merge_structured(items: list[Any]) -> Any:
                     out[k].extend(v)
                 elif isinstance(v, list):
                     out[k] = list(v)
-                else:
-                    out.setdefault(k, v)
+                elif _is_number(v) and _is_number(out.get(k)):
+                    # Counts (emails/meetings/decisions) are dataset-local; sum
+                    # them across per-dataset answers instead of keeping first.
+                    out[k] = out[k] + v
+                elif out.get(k) in (None, ""):
+                    # Fill from the first dataset that actually has a value, so
+                    # an empty role/org doesn't shadow a later populated one.
+                    out[k] = v
         return out
     # Mixed — prefer the first list, else the first item.
     for i in items:
@@ -479,9 +489,40 @@ def _normalize_search(data: Any, question: str) -> dict[str, Any]:
     return {"answer": primary["answer"], "sources": sources[:10]}
 
 
+# Generic phrases that collide with perfectly good answers ("Bob was unable to
+# attend", "no specific date was set but the budget is $45k"). On their own
+# these must NOT condemn an answer — only the strong "absence of information"
+# frames below do.
+_WEAK_HEDGE = (
+    "unable to",
+    "not able to",
+    "i'm unable",
+    "im unable",
+    "no specific",
+    "is not clear",
+    "isn't clear",
+)
+_STRONG_HEDGE = tuple(m for m in _UNINFORMATIVE if m not in _WEAK_HEDGE)
+
+
 def _is_informative(text: str) -> bool:
-    low = text.lower()
-    return not any(marker in low for marker in _UNINFORMATIVE)
+    """True unless the answer is essentially just a hedge / non-answer.
+
+    A hedge SUBSTRING frequently appears inside a good answer, and demoting
+    those to the fallback pool let a weaker dataset's reply win. So: keep any
+    answer that carries a concrete fact; treat a strong "no such information"
+    frame with no concrete fact as a non-answer; and for merely generic hedge
+    words, only demote a short reply that is basically the hedge itself.
+    """
+    low = text.lower().strip()
+    if not any(marker in low for marker in _UNINFORMATIVE):
+        return True
+    if any(ch.isdigit() for ch in low):
+        return True  # carries a concrete figure -> informative
+    if any(marker in low for marker in _STRONG_HEDGE):
+        return False  # explicit "the memories don't contain this" -> non-answer
+    # Only generic/weak hedge words remain: keep unless it's a short scrap.
+    return len(low) > 60
 
 
 def _norm_text(text: str) -> str:

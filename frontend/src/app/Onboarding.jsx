@@ -25,7 +25,9 @@ export default function Onboarding({ onDone }) {
   const [pct, setPct] = useState(0)
   const [count, setCount] = useState(0)
   const [conn, setConn] = useState({})
+  const [importOpen, setImportOpen] = useState(false)
   const timer = useRef(null)
+  const importRef = useRef(null)
 
   const loadConnectors = () =>
     getConnectors()
@@ -37,7 +39,12 @@ export default function Onboarding({ onDone }) {
   }, [])
 
   const handleConnect = (src) => {
-    if (!src.provider) return // apple_notes -> handled via import panel below
+    if (!src.provider) {
+      // apple_notes has no API -> open the file-import panel and scroll to it
+      setImportOpen(true)
+      requestAnimationFrame(() => importRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+      return
+    }
     const state = conn[src.key]
     if (state && !state.configured) return // setup required
     // full-page redirect into the backend OAuth flow
@@ -139,7 +146,12 @@ export default function Onboarding({ onDone }) {
               })}
             </div>
 
-            <details className="mb-8">
+            <details
+              ref={importRef}
+              open={importOpen}
+              onToggle={(e) => setImportOpen(e.target.open)}
+              className="mb-8"
+            >
               <summary className="cursor-pointer text-[13px] text-lavender mb-3">
                 + Import a file instead (PDF, doc, calendar)
               </summary>

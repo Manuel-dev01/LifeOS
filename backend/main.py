@@ -324,7 +324,11 @@ async def auth_callback(provider: str, code: str | None = None, error: str | Non
 async def connector_sync(provider: str) -> StatusResp:
     """Re-fetch from an already-connected provider using the stored token."""
     try:
-        if not token_store.is_connected(provider if provider != "gmail" else "google"):
+        # Gmail/Calendar/Drive all share the single 'google' token, so check
+        # that key for any Google-backed card (not the card name, which is
+        # never a token key on its own).
+        check_key = "google" if provider in _GOOGLE_CARDS or provider == "google" else provider
+        if not token_store.is_connected(check_key):
             raise HTTPException(400, f"{provider} is not connected")
         total = 0
         if provider in _GOOGLE_CARDS or provider == "google":

@@ -131,6 +131,13 @@ async def get_entity_graph() -> dict[str, Any]:
 
 # ---- helpers ----------------------------------------------------------------
 def _dedupe_people(people: list[Any]) -> list[dict[str, Any]]:
+    """Merge the same person across per-dataset answers.
+
+    The tenant answers per dataset, so one person can appear several times, each
+    carrying counts (emails/meetings/decisions) scoped to that dataset. Keeping
+    only the first entry dropped the rest, so a person with real meetings could
+    show meetings=0. Sum numeric fields, fill empty text fields, union lists.
+    """
     seen: dict[str, dict[str, Any]] = {}
     for p in people:
         if not isinstance(p, dict):
@@ -140,8 +147,19 @@ def _dedupe_people(people: list[Any]) -> list[dict[str, Any]]:
             continue
         key = name.lower()
         if key not in seen:
-            p.setdefault("initials", _initials(name))
-            seen[key] = p
+            merged = dict(p)
+            merged.setdefault("initials", _initials(name))
+            seen[key] = merged
+            continue
+        cur = seen[key]
+        for k, v in p.items():
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                base = cur.get(k)
+                cur[k] = (base if isinstance(base, (int, float)) and not isinstance(base, bool) else 0) + v
+            elif isinstance(v, list):
+                cur[k] = (cur.get(k) if isinstance(cur.get(k), list) else []) + v
+            elif isinstance(v, str) and v.strip() and not str(cur.get(k, "")).strip():
+                cur[k] = v
     return list(seen.values())
 
 

@@ -16,16 +16,22 @@ export default function SourcesView({ datasets, onChange }) {
   const [busy, setBusy] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
   const [conn, setConn] = useState({})
+  const [err, setErr] = useState('')
 
   useEffect(() => {
     getConnectors().then(({ data }) => setConn(data)).catch(() => {})
   }, [])
 
+  const errMsg = (e) => e?.response?.data?.detail || e?.message || 'Something went wrong'
+
   const sync = async (key) => {
     setBusy(`sync-${key}`)
+    setErr('')
     try {
       await syncConnector(key)
       onChange()
+    } catch (e) {
+      setErr(`Sync failed: ${errMsg(e)}`)
     } finally {
       setBusy(null)
     }
@@ -34,9 +40,12 @@ export default function SourcesView({ datasets, onChange }) {
   const forget = async (name) => {
     if (!confirm(`Forget "${name}"? This permanently deletes those memories.`)) return
     setBusy(name)
+    setErr('')
     try {
       await forgetDataset(name)
       onChange()
+    } catch (e) {
+      setErr(`Forget failed: ${errMsg(e)}`)
     } finally {
       setBusy(null)
     }
@@ -58,6 +67,12 @@ export default function SourcesView({ datasets, onChange }) {
       />
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="max-w-2xl mx-auto">
+          {err && (
+            <div className="mb-4 rounded-xl border border-danger/30 bg-danger/10 text-danger text-[13px] px-4 py-2.5 flex items-center justify-between">
+              <span>{err}</span>
+              <button onClick={() => setErr('')} className="text-danger/70 hover:text-danger">✕</button>
+            </div>
+          )}
           {showAdd && (
             <div className="mb-6">
               <AddMemory

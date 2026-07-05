@@ -67,8 +67,39 @@ async def fetch_pages(limit: int = 20) -> list[str]:
         resp.raise_for_status()
         for page in resp.json().get("results", []):
             title = _page_title(page)
-            out.append(f"Notion page '{title}'.")
+            body = await _page_text(client, headers, page.get("id", ""))
+            line = f"Notion page '{title}'."
+            if body:
+                line += f" {body[:2000]}"
+            out.append(line)
     return out
+
+
+async def _page_text(client: httpx.AsyncClient, headers: dict[str, str], page_id: str) -> str:
+    """Pull the plain text of a page's top-level blocks so recall has content."""
+    if not page_id:
+        return ""
+    try:
+        resp = await client.get(
+            f"https://api.notion.com/v1/blocks/{page_id}/children",
+            headers=headers,
+            params={"page_size": 50},
+        )
+        if resp.status_code != 200:
+            return ""
+        parts: list[str] = []
+        for block in resp.json().get("results", []):
+            btype = block.get("type", "")
+            payload = block.get(btype)
+            if isinstance(payload, dict):
+                rich = payload.get("rich_text", [])
+                text = "".join(t.get("plain_text", "") for t in rich).strip()
+                if text:
+                    parts.append(text)
+        return " ".join(parts).strip()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("notion page text failed: %s", e)
+        return ""
 
 
 def _page_title(page: dict[str, Any]) -> str:
