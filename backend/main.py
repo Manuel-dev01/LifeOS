@@ -168,10 +168,15 @@ async def query(req: QueryReq) -> QueryResp:
 @app.post("/improve", response_model=StatusResp)
 async def improve(req: ImproveReq | None = None) -> StatusResp:
     try:
-        datasets = req.datasets if req else None
-        result = await cognee_client.improve(datasets)
+        # The tenant's cognify requires explicit datasets (400 otherwise), so
+        # default to the consolidated memory dataset when none are given.
+        datasets = (req.datasets if req and req.datasets else None) or [config.MEMORY_DATASET]
+        result = await asyncio.wait_for(cognee_client.improve(datasets), timeout=180.0)
         insights.invalidate()
         return StatusResp(status="Memory improved (graph re-enriched)", detail=result)
+    except asyncio.TimeoutError:
+        logger.warning("improve: cognify timed out (tenant slow)")
+        raise HTTPException(504, "Improve is taking longer than expected; try again shortly.")
     except Exception as e:  # noqa: BLE001
         raise _handle("improve", e)
 

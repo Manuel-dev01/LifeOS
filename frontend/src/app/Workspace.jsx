@@ -21,6 +21,9 @@ export default function Workspace() {
   const [toast, setToast] = useState(null)
   const [identityKey, setIdentityKey] = useState(0)
   const [navOpen, setNavOpen] = useState(false)
+  // Chat lives here (not in AskView) so the conversation persists across tabs.
+  const [chatMessages, setChatMessages] = useState([])
+  const [chatLoading, setChatLoading] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const refreshDatasets = useCallback(async () => {
@@ -114,7 +117,15 @@ export default function Workspace() {
         </div>
 
         <main className="flex-1 min-w-0 bg-paper overflow-hidden flex flex-col">
-          {view === 'ask' && <AskView onOpenGraph={() => nav('graph')} onOpenPerson={openPerson} />}
+          {view === 'ask' && (
+            <AskView
+              onOpenGraph={() => nav('graph')}
+              messages={chatMessages}
+              setMessages={setChatMessages}
+              loading={chatLoading}
+              setLoading={setChatLoading}
+            />
+          )}
           {view === 'graph' && <GraphView />}
           {view === 'timeline' && <TimelineView />}
           {view === 'people' && <PeopleView onOpenPerson={openPerson} />}

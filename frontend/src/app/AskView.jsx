@@ -14,10 +14,9 @@ const SUGGESTIONS = [
 
 const SOURCE_COLORS = { email: '#6E68FF', meeting: '#5cbf9a', note: '#d9a24a', upload: '#8b86ff' }
 
-export default function AskView({ onOpenGraph }) {
-  const [messages, setMessages] = useState([])
+export default function AskView({ onOpenGraph, messages, setMessages, loading, setLoading }) {
+  // Conversation + loading live in Workspace so the chat survives tab switches.
   const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
   const scrollRef = useRef(null)
   const lastSources = messages.filter((m) => m.role === 'assistant').slice(-1)[0]?.sources || []
 
