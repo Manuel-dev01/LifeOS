@@ -163,9 +163,15 @@ async def improve(req: ImproveReq | None = None) -> StatusResp:
 # ------------------------------ Datasets / Forget ------------------------------ #
 @app.get("/datasets", response_model=list[Dataset])
 async def datasets() -> list[Dataset]:
+    # Listing datasets on the tenant is occasionally slow; bound it so the
+    # sidebar/sources UI degrades to empty instead of hanging. Recall itself
+    # uses /search (a different, healthy path), so this never blocks answers.
     try:
-        items = await cognee_client.list_datasets()
+        items = await asyncio.wait_for(cognee_client.list_datasets(), timeout=18.0)
         return [Dataset(id=d["id"], name=d["name"]) for d in items]
+    except asyncio.TimeoutError:
+        logger.warning("datasets: tenant listing timed out; returning empty")
+        return []
     except Exception as e:  # noqa: BLE001
         raise _handle("datasets", e)
 
@@ -269,6 +275,34 @@ async def connectors() -> dict:
         "slack": {"provider": "slack", "configured": config.slack_configured(), "connected": token_store.is_connected("slack")},
         "apple_notes": {"provider": None, "configured": False, "connected": False, "note": "No public API; use file import"},
     }
+
+
+@app.get("/me")
+async def me() -> dict:
+    """Real account identity for the sidebar — derived from what's connected.
+
+    Tenant-independent (reads only the local token store), so it stays fast even
+    when the Cognee tenant is slow.
+    """
+    google = token_store.get("google") or {}
+    email = google.get("email")
+    connected = [p for p in ("google", "notion", "slack") if token_store.is_connected(p)]
+    if email:
+        name = email.split("@")[0].replace(".", " ").replace("_", " ").title()
+        return {"connected": True, "email": email, "name": name, "initials": _initials(name), "sources": connected}
+    if connected:
+        label = connected[0].title()
+        return {"connected": True, "email": None, "name": label, "initials": label[:2].upper(), "sources": connected}
+    return {"connected": False, "email": None, "name": "My vault", "initials": "ME", "sources": []}
+
+
+def _initials(name: str) -> str:
+    parts = [p for p in name.split() if p]
+    if not parts:
+        return "ME"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return (parts[0][0] + parts[-1][0]).upper()
 
 
 @app.get("/auth/{provider}/login")

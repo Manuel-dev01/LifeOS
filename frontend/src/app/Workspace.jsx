@@ -18,6 +18,7 @@ export default function Workspace() {
   const [health, setHealth] = useState(null)
   const [activePerson, setActivePerson] = useState(null)
   const [toast, setToast] = useState(null)
+  const [identityKey, setIdentityKey] = useState(0)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const refreshDatasets = useCallback(async () => {
@@ -46,6 +47,7 @@ export default function Workspace() {
       setView('ask')
       setToast({ ok: true, text: `${connected} connected${count ? ` · ${count} memories imported` : ''}` })
       refreshDatasets()
+      setIdentityKey((k) => k + 1)
       setSearchParams({}, { replace: true })
     } else if (err) {
       setToast({ ok: false, text: `Connect failed: ${err}` })
@@ -76,6 +78,7 @@ export default function Workspace() {
         view={view}
         onNav={nav}
         health={health}
+        identityKey={identityKey}
         onReplayOnboarding={() => setOnboarding(true)}
       />
 

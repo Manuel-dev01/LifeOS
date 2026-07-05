@@ -53,6 +53,7 @@ export default function DemoVideo() {
 
   return (
     <section
+      id="demo"
       className="px-6 md:px-[6vw] py-[130px]"
       style={{ background: 'linear-gradient(180deg,#0B0D12,#0e1020 50%,#0B0D12)' }}
     >

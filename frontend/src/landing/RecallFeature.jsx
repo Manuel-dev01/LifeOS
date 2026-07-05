@@ -1,6 +1,6 @@
 export default function RecallFeature() {
   return (
-    <section className="bg-paper text-ink-900 px-6 md:px-[6vw] py-[130px]">
+    <section id="product" className="bg-paper text-ink-900 px-6 md:px-[6vw] py-[130px]">
       <div className="max-w-6xl mx-auto grid md:grid-cols-[1.05fr_1fr] gap-16 items-center">
         {/* left copy */}
         <div className="revl">

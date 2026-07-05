@@ -41,7 +41,7 @@ const PILLARS = [
 
 export default function Pillars() {
   return (
-    <section className="bg-ink px-6 md:px-[6vw] py-[130px]">
+    <section id="security" className="bg-ink px-6 md:px-[6vw] py-[130px]">
       <div className="max-w-6xl mx-auto">
         <div className="revl mb-16">
           <div className="font-mono text-[12px] tracking-[0.18em] text-lavender mb-5">

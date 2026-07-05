@@ -1,7 +1,20 @@
 import { Link } from 'react-router-dom'
 import Logo, { Wordmark } from '../components/Logo'
 
-const FOOTER_LINKS = ['Product', 'Memory Graph', 'Security', 'Pricing', 'Docs', 'Company']
+const REPO_URL = 'https://github.com/Manuel-dev01/LifeOS'
+
+// Only real destinations: on-page sections scroll, docs/source go to the repo.
+const FOOTER_LINKS = [
+  { label: 'Product', target: 'product' },
+  { label: 'Memory Graph', target: 'graph' },
+  { label: 'Security', target: 'security' },
+  { label: 'Demo', target: 'demo' },
+  { label: 'Docs', href: REPO_URL },
+  { label: 'Source', href: REPO_URL },
+]
+
+const scrollTo = (id) =>
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
 export default function CTA() {
   return (
@@ -31,9 +44,12 @@ export default function CTA() {
           >
             Open the app →
           </Link>
-          <span className="rounded-full border border-white/15 text-mist font-medium px-[30px] py-4 cursor-pointer hover:bg-white/[0.05] transition">
+          <button
+            onClick={() => scrollTo('demo')}
+            className="rounded-full border border-white/15 text-mist font-medium px-[30px] py-4 cursor-pointer hover:bg-white/[0.05] transition"
+          >
             Watch the 90-sec tour
-          </span>
+          </button>
         </div>
       </div>
 
@@ -44,14 +60,30 @@ export default function CTA() {
           <Wordmark className="text-[16px] text-mist" />
         </div>
         <div className="flex flex-wrap gap-5 font-mono text-[12px] text-[#8890a2]">
-          {FOOTER_LINKS.map((l) => (
-            <span key={l} className="cursor-pointer hover:text-mist transition">
-              {l}
-            </span>
-          ))}
+          {FOOTER_LINKS.map((l) =>
+            l.href ? (
+              <a
+                key={l.label}
+                href={l.href}
+                target="_blank"
+                rel="noreferrer"
+                className="cursor-pointer hover:text-mist transition"
+              >
+                {l.label}
+              </a>
+            ) : (
+              <button
+                key={l.label}
+                onClick={() => scrollTo(l.target)}
+                className="cursor-pointer hover:text-mist transition"
+              >
+                {l.label}
+              </button>
+            )
+          )}
         </div>
         <div className="font-mono text-[11px] text-[#565d6b]">
-          © 2025 LifeOS · Your AI that never forgets
+          © 2026 LifeOS · Your AI that never forgets
         </div>
       </div>
     </section>

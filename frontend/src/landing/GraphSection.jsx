@@ -3,6 +3,7 @@ import MemoryGraph3D from './MemoryGraph3D'
 export default function GraphSection() {
   return (
     <section
+      id="graph"
       className="relative min-h-[900px] overflow-hidden px-6 md:px-[6vw] py-[150px]"
       style={{
         background:

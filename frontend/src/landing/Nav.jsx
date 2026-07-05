@@ -1,6 +1,15 @@
 import { Link } from 'react-router-dom'
 import Logo, { Wordmark } from '../components/Logo'
 
+const NAV_ITEMS = [
+  { label: 'Product', target: 'product' },
+  { label: 'Memory Graph', target: 'graph' },
+  { label: 'Security', target: 'security' },
+]
+
+const scrollTo = (id) =>
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
 export default function Nav() {
   return (
     <nav
@@ -15,9 +24,15 @@ export default function Nav() {
         <Wordmark className="text-[19px] text-mist" />
       </div>
       <div className="hidden md:flex items-center gap-8 text-sm text-[#aab0c0]">
-        <span className="cursor-pointer hover:text-mist transition">Product</span>
-        <span className="cursor-pointer hover:text-mist transition">Memory Graph</span>
-        <span className="cursor-pointer hover:text-mist transition">Security</span>
+        {NAV_ITEMS.map((it) => (
+          <button
+            key={it.target}
+            onClick={() => scrollTo(it.target)}
+            className="cursor-pointer hover:text-mist transition"
+          >
+            {it.label}
+          </button>
+        ))}
       </div>
       <Link
         to="/app"

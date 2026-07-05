@@ -4,10 +4,12 @@ import Markdown from '../components/Markdown'
 import RecallRail from './RecallRail'
 import Logo from '../components/Logo'
 
+// Data-agnostic starters that make sense for anyone's real connected memory
+// (email / calendar / notes) rather than a fixed demo storyline.
 const SUGGESTIONS = [
-  'What was the final agreed marketing budget?',
-  'Who was responsible for influencer campaigns?',
-  'Where was the budget meeting held?',
+  'What do I need to follow up on this week?',
+  'Summarize my most recent conversations.',
+  'Who have I been talking to the most?',
 ]
 
 const SOURCE_COLORS = { email: '#6E68FF', meeting: '#5cbf9a', note: '#d9a24a', upload: '#8b86ff' }

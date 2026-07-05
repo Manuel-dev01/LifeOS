@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react'
 import Logo, { Wordmark } from '../components/Logo'
+import { getMe } from '../api'
 
 const PRIMARY = [
   { key: 'ask', label: 'Ask', icon: 'M4 5h16M4 12h16M4 19h10' },
@@ -28,8 +30,18 @@ function NavItem({ item, active, onClick }) {
   )
 }
 
-export default function Sidebar({ view, onNav, health, onReplayOnboarding }) {
+export default function Sidebar({ view, onNav, health, onReplayOnboarding, identityKey }) {
   const isActive = (k) => view === k || (k === 'people' && view === 'person')
+  const [me, setMe] = useState(null)
+
+  // Re-fetch identity when a connection changes (identityKey bumps on connect).
+  useEffect(() => {
+    getMe().then(({ data }) => setMe(data)).catch(() => setMe(null))
+  }, [identityKey])
+
+  const name = me?.name || 'My vault'
+  const initials = me?.initials || 'ME'
+  const subtitle = me?.email || (me?.connected ? 'Connected' : 'Not connected yet')
   return (
     <aside className="w-[230px] shrink-0 h-full flex flex-col bg-ink-side text-mist border-r border-white/[0.07]">
       <div className="flex items-center gap-2.5 px-5 py-5">
@@ -57,12 +69,12 @@ export default function Sidebar({ view, onNav, health, onReplayOnboarding }) {
           </span>
         </div>
         <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-white/[0.03]">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand to-lavender flex items-center justify-center text-[11px] font-semibold text-white">
-            AM
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand to-lavender flex items-center justify-center text-[11px] font-semibold text-white shrink-0">
+            {initials}
           </div>
           <div className="min-w-0">
-            <div className="text-[13px] font-medium truncate">Alex Morgan</div>
-            <div className="text-[11px] text-muted truncate">Personal vault</div>
+            <div className="text-[13px] font-medium truncate">{name}</div>
+            <div className="text-[11px] text-muted truncate">{subtitle}</div>
           </div>
         </div>
         <button

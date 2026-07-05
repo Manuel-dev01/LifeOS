@@ -31,6 +31,9 @@ export const getDatasets = () => api.get('/datasets')
 
 export const getHealth = () => api.get('/health')
 
+// Real account identity (from connected accounts), for the sidebar
+export const getMe = () => api.get('/me')
+
 // Dynamic insight endpoints (extracted from real memories)
 export const getPeople = () => api.get('/people')
 export const getPerson = (name) => api.get(`/people/${encodeURIComponent(name)}`)

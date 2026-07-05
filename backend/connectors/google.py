@@ -84,9 +84,22 @@ def exchange_code(code: str) -> Credentials:
             "client_id": creds.client_id,
             "client_secret": creds.client_secret,
             "scopes": list(creds.scopes or SCOPES),
+            # Real account identity for the UI (falls back gracefully if the
+            # profile call fails — never block the connect on it).
+            "email": _account_email(creds),
         },
     )
     return creds
+
+
+def _account_email(creds: Credentials) -> str | None:
+    """The connected Gmail address (users.getProfile needs no extra scope)."""
+    try:
+        svc = build("gmail", "v1", credentials=creds, cache_discovery=False)
+        return svc.users().getProfile(userId="me").execute().get("emailAddress")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("google profile fetch failed: %s", e)
+        return None
 
 
 def _credentials() -> Credentials | None:
