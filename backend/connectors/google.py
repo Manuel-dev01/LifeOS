@@ -47,11 +47,17 @@ def _client_config() -> dict[str, Any]:
 
 
 def _flow(state: str | None = None) -> Flow:
+    # This is a confidential web client (we hold client_secret), so PKCE is
+    # optional. We disable auto-PKCE because login and callback are separate
+    # stateless requests: authorization_url() would mint a code_verifier that
+    # the fresh Flow in exchange_code() can't reproduce, and Google would
+    # reject the token exchange with invalid_grant. No verifier, no mismatch.
     return Flow.from_client_config(
         _client_config(),
         scopes=SCOPES,
         redirect_uri=config.GOOGLE_REDIRECT_URI,
         state=state,
+        autogenerate_code_verifier=False,
     )
 
 

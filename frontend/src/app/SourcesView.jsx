@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
 import { forgetDataset, getConnectors, connectUrl, syncConnector } from '../api'
 import ViewHeader from './ViewHeader'
+import BrandIcon from '../components/BrandIcon'
 import AddMemory from './AddMemory'
 
 const CONNECTORS = [
-  { key: 'gmail', provider: 'google', name: 'Gmail', mark: '#D93025' },
-  { key: 'calendar', provider: 'google', name: 'Calendar', mark: '#4A44E6' },
-  { key: 'drive', provider: 'google', name: 'Drive', mark: '#4aa3d9' },
-  { key: 'notion', provider: 'notion', name: 'Notion', mark: '#13151B' },
-  { key: 'slack', provider: 'slack', name: 'Slack', mark: '#611f69' },
+  { key: 'gmail', provider: 'google', name: 'Gmail' },
+  { key: 'calendar', provider: 'google', name: 'Calendar' },
+  { key: 'drive', provider: 'google', name: 'Drive' },
+  { key: 'notion', provider: 'notion', name: 'Notion' },
+  { key: 'slack', provider: 'slack', name: 'Slack' },
 ]
 
 export default function SourcesView({ datasets, onChange }) {
@@ -83,9 +84,8 @@ export default function SourcesView({ datasets, onChange }) {
                     key={c.key}
                     className="flex items-center gap-2.5 rounded-xl bg-white border border-[#eceef3] px-3 py-2.5"
                   >
-                    <span className="h-7 w-7 rounded-lg flex items-center justify-center text-white text-[12px] font-bold" style={{ background: c.mark }}>
-                      {c.name[0]}
-                    </span>
+                    <BrandIcon name={c.key} size={18} tile />
+
                     <span className="text-[13px] font-medium text-ink-900 flex-1">{c.name}</span>
                     {connected ? (
                       <button

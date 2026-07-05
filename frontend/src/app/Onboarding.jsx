@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 import Logo, { Wordmark } from '../components/Logo'
+import BrandIcon from '../components/BrandIcon'
 import AddMemory from './AddMemory'
 import { improveMemory, getDatasets, getConnectors, connectUrl } from '../api'
 
 // key = the /connectors card key; provider = which OAuth flow to start.
 const SOURCES = [
-  { key: 'gmail', provider: 'google', name: 'Gmail', detail: 'emails', mark: '#D93025' },
-  { key: 'calendar', provider: 'google', name: 'Calendar', detail: 'events', mark: '#4A44E6' },
-  { key: 'drive', provider: 'google', name: 'Drive', detail: 'docs', mark: '#4aa3d9' },
-  { key: 'notion', provider: 'notion', name: 'Notion', detail: 'pages', mark: '#13151B' },
-  { key: 'slack', provider: 'slack', name: 'Slack', detail: 'messages', mark: '#611f69' },
-  { key: 'apple_notes', provider: null, name: 'Apple Notes', detail: 'import file', mark: '#c08a34' },
+  { key: 'gmail', provider: 'google', name: 'Gmail', detail: 'emails' },
+  { key: 'calendar', provider: 'google', name: 'Calendar', detail: 'events' },
+  { key: 'drive', provider: 'google', name: 'Drive', detail: 'docs' },
+  { key: 'notion', provider: 'notion', name: 'Notion', detail: 'pages' },
+  { key: 'slack', provider: 'slack', name: 'Slack', detail: 'messages' },
+  { key: 'apple_notes', provider: null, name: 'Apple Notes', detail: 'import file' },
 ]
 
 const BUILD_ROWS = [
@@ -121,9 +122,8 @@ export default function Onboarding({ onDone }) {
                     }`}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <span className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-[13px] font-bold" style={{ background: s.mark }}>
-                        {s.name[0]}
-                      </span>
+                      <BrandIcon name={s.key} size={22} tile />
+
                       {connected && (
                         <span className="h-5 w-5 rounded-full bg-lavender/20 text-lavender flex items-center justify-center text-[11px]">
                           ✓
