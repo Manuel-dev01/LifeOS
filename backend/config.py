@@ -45,6 +45,12 @@ COGNEE_API_KEY = _first("COGNEE_API_KEY", "API-KEY", "API_KEY", default="") or "
 # All hosted routes are versioned under /api/v1.
 API_PREFIX = "/api/v1"
 
+# Single dataset that holds ALL memory (every connector + upload feeds it). The
+# tenant runs one GRAPH_COMPLETION per dataset (~14s each, serialized), so
+# consolidating into one dataset keeps recall AND every insight view to a single
+# bounded call instead of N-per-dataset.
+MEMORY_DATASET = _first("MEMORY_DATASET", default="memory") or "memory"
+
 # Frontend origin allowed by CORS.
 FRONTEND_ORIGIN = _first("FRONTEND_ORIGIN", default="http://localhost:5173")
 

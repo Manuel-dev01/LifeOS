@@ -93,16 +93,18 @@ async def health() -> dict:
 @app.post("/ingest/text", response_model=StatusResp)
 async def ingest_text(req: IngestTextReq) -> StatusResp:
     try:
-        result = await cognee_client.remember_text(req.text, req.dataset_name)
+        # Everything lands in the single memory dataset (see config.MEMORY_DATASET)
+        # so recall + insights stay one bounded LLM call.
+        result = await cognee_client.remember_text(req.text, config.MEMORY_DATASET)
         insights.invalidate()
-        return StatusResp(status=f"Remembered into '{req.dataset_name}'", detail=result)
+        return StatusResp(status=f"Remembered into '{config.MEMORY_DATASET}'", detail=result)
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_text", e)
 
 
 @app.post("/ingest/file", response_model=StatusResp)
 async def ingest_file(
-    file: UploadFile = File(...), dataset_name: str = "upload"
+    file: UploadFile = File(...), dataset_name: str | None = None
 ) -> StatusResp:
     tmp_path = None
     try:
@@ -111,10 +113,10 @@ async def ingest_file(
             tmp.write(await file.read())
             tmp_path = tmp.name
         result = await cognee_client.remember_file(
-            tmp_path, dataset_name=dataset_name, filename=file.filename
+            tmp_path, dataset_name=config.MEMORY_DATASET, filename=file.filename
         )
         insights.invalidate()
-        return StatusResp(status=f"Remembered file into '{dataset_name}'", detail=result)
+        return StatusResp(status=f"Remembered file into '{config.MEMORY_DATASET}'", detail=result)
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_file", e)
     finally:
@@ -128,9 +130,9 @@ async def ingest_calendar(req: CalendarReq) -> StatusResp:
         memory_text = ics_to_memory_text(req.ics_text)
         if not memory_text.strip():
             raise ValueError("No events parsed from ICS content.")
-        result = await cognee_client.remember_text(memory_text, req.dataset_name)
+        result = await cognee_client.remember_text(memory_text, config.MEMORY_DATASET)
         insights.invalidate()
-        return StatusResp(status=f"Remembered calendar into '{req.dataset_name}'", detail=result)
+        return StatusResp(status=f"Remembered calendar into '{config.MEMORY_DATASET}'", detail=result)
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_calendar", e)
 
@@ -235,10 +237,18 @@ async def export_vault() -> dict:
 
 
 # ------------------------------ Insights (dynamic) ------------------------------ #
+# Insight views run a GRAPH_COMPLETION over the memory dataset (~14s). Bound
+# each so a slow tenant degrades to an empty view instead of hanging to a 502.
+_INSIGHT_TIMEOUT = 60.0
+
+
 @app.get("/people")
 async def people() -> list[dict]:
     try:
-        return await insights.get_people()
+        return await asyncio.wait_for(insights.get_people(), timeout=_INSIGHT_TIMEOUT)
+    except asyncio.TimeoutError:
+        logger.warning("people: timed out (tenant slow)")
+        return []
     except Exception as e:  # noqa: BLE001
         raise _handle("people", e)
 
@@ -246,10 +256,12 @@ async def people() -> list[dict]:
 @app.get("/people/{name}")
 async def person(name: str) -> dict:
     try:
-        result = await insights.get_person(name)
+        result = await asyncio.wait_for(insights.get_person(name), timeout=_INSIGHT_TIMEOUT)
         if not result:
             raise HTTPException(status_code=404, detail=f"No memories about '{name}'")
         return result
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Memory service is slow, try again in a moment")
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001
@@ -259,7 +271,10 @@ async def person(name: str) -> dict:
 @app.get("/timeline")
 async def timeline() -> list[dict]:
     try:
-        return await insights.get_timeline()
+        return await asyncio.wait_for(insights.get_timeline(), timeout=_INSIGHT_TIMEOUT)
+    except asyncio.TimeoutError:
+        logger.warning("timeline: timed out (tenant slow)")
+        return []
     except Exception as e:  # noqa: BLE001
         raise _handle("timeline", e)
 
@@ -267,7 +282,10 @@ async def timeline() -> list[dict]:
 @app.get("/graph")
 async def graph() -> dict:
     try:
-        return await insights.get_entity_graph()
+        return await asyncio.wait_for(insights.get_entity_graph(), timeout=_INSIGHT_TIMEOUT)
+    except asyncio.TimeoutError:
+        logger.warning("graph: timed out (tenant slow)")
+        return {"nodes": [], "edges": []}
     except Exception as e:  # noqa: BLE001
         raise _handle("graph", e)
 
@@ -352,21 +370,22 @@ async def auth_callback(provider: str, code: str | None = None, error: str | Non
         if provider == "google":
             creds = await run_in_threadpool(gconn.exchange_code, code)
             fetched = await run_in_threadpool(gconn.fetch_all, creds)
-            for dataset, texts in fetched.items():
-                if texts:
-                    await cognee_client.remember_batch(texts, dataset)
-                    total += len(texts)
+            # Consolidate gmail+calendar+drive into the single memory dataset.
+            texts = [t for lst in fetched.values() for t in lst]
+            if texts:
+                await cognee_client.remember_batch(texts, config.MEMORY_DATASET)
+                total += len(texts)
         elif provider == "notion":
             await nconn.exchange_code(code)
             texts = await nconn.fetch_pages()
             if texts:
-                await cognee_client.remember_batch(texts, "notion")
+                await cognee_client.remember_batch(texts, config.MEMORY_DATASET)
                 total += len(texts)
         elif provider == "slack":
             await sconn.exchange_code(code)
             texts = await sconn.fetch_messages()
             if texts:
-                await cognee_client.remember_batch(texts, "slack")
+                await cognee_client.remember_batch(texts, config.MEMORY_DATASET)
                 total += len(texts)
         else:
             return RedirectResponse(f"{config.FRONTEND_APP_URL}?connect_error=unknown_provider")
@@ -392,18 +411,20 @@ async def connector_sync(provider: str) -> StatusResp:
         if provider in _GOOGLE_CARDS or provider == "google":
             creds = await run_in_threadpool(gconn._credentials)
             fetched = await run_in_threadpool(gconn.fetch_all, creds)
-            for dataset, texts in fetched.items():
-                if texts:
-                    await cognee_client.remember_batch(texts, dataset)
-                    total += len(texts)
+            texts = [t for lst in fetched.values() for t in lst]
+            if texts:
+                await cognee_client.remember_batch(texts, config.MEMORY_DATASET)
+                total += len(texts)
         elif provider == "notion":
             texts = await nconn.fetch_pages()
-            await cognee_client.remember_batch(texts, "notion")
-            total += len(texts)
+            if texts:
+                await cognee_client.remember_batch(texts, config.MEMORY_DATASET)
+                total += len(texts)
         elif provider == "slack":
             texts = await sconn.fetch_messages()
-            await cognee_client.remember_batch(texts, "slack")
-            total += len(texts)
+            if texts:
+                await cognee_client.remember_batch(texts, config.MEMORY_DATASET)
+                total += len(texts)
         insights.invalidate()
         return StatusResp(status=f"Synced {total} items from {provider}")
     except HTTPException:

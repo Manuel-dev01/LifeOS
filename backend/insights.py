@@ -12,6 +12,11 @@ import time
 from typing import Any, Optional
 
 import cognee_client
+import config
+
+# All insights read from the single consolidated memory dataset, so each view is
+# exactly one GRAPH_COMPLETION call (~14s) instead of one-per-dataset.
+_DS = [config.MEMORY_DATASET]
 
 # ---- simple TTL cache -------------------------------------------------------
 _CACHE: dict[str, tuple[float, Any]] = {}
@@ -86,6 +91,7 @@ async def get_people() -> list[dict[str, Any]]:
     data = await cognee_client.search_structured(
         "List all people across my memories with their roles and involvement counts.",
         _PEOPLE_SYS,
+        datasets=_DS,
     )
     people = _dedupe_people(data if isinstance(data, list) else [])
     return _store("people", people)
@@ -99,6 +105,7 @@ async def get_person(name: str) -> Optional[dict[str, Any]]:
     data = await cognee_client.search_structured(
         f"Everything about {name}: role, when first met, and recent threads.",
         _PERSON_SYS,
+        datasets=_DS,
     )
     person = data if isinstance(data, dict) else None
     return _store(key, person)
@@ -111,6 +118,7 @@ async def get_timeline() -> list[dict[str, Any]]:
     data = await cognee_client.search_structured(
         "Build a chronological timeline of every memory and event.",
         _TIMELINE_SYS,
+        datasets=_DS,
     )
     timeline = data if isinstance(data, list) else []
     return _store("timeline", timeline)
@@ -124,6 +132,7 @@ async def get_entity_graph() -> dict[str, Any]:
         "Extract the knowledge graph of people, emails, meetings, notes and "
         "decisions and how they connect.",
         _GRAPH_SYS,
+        datasets=_DS,
     )
     graph = _clean_graph(data if isinstance(data, dict) else {})
     return _store("graph", graph)

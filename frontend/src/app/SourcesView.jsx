@@ -147,7 +147,7 @@ export default function SourcesView({ datasets, onChange }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-meeting" />
-                  <span className="font-mono text-[11px] text-[#9aa3b2]">Synced</span>
+                  <span className="font-mono text-[11px] text-[#9aa3b2]">in memory</span>
                 </div>
                 <button
                   onClick={() => forget(d.name)}

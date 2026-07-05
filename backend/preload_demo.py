@@ -12,9 +12,11 @@ import sys
 from pathlib import Path
 
 import cognee_client
+import config
 from ingestion import ics_to_memory_text, notes_json_to_memory_text
 
 DEMO_DIR = Path(__file__).resolve().parent.parent / "demo_data"
+DS = config.MEMORY_DATASET  # everything consolidates into the one memory dataset
 
 
 async def reset() -> None:
@@ -42,19 +44,17 @@ async def main() -> None:
     ics = (DEMO_DIR / "calendar.ics").read_text(encoding="utf-8")
     notes = json.loads((DEMO_DIR / "notes.json").read_text(encoding="utf-8"))
 
-    print("Ingesting emails -> dataset 'emails' ...")
-    await cognee_client.remember_text(emails, dataset_name="emails")
+    print(f"Ingesting emails -> dataset '{DS}' ...")
+    await cognee_client.remember_text(emails, dataset_name=DS)
 
-    print("Ingesting calendar -> dataset 'calendar' ...")
-    await cognee_client.remember_text(ics_to_memory_text(ics), dataset_name="calendar")
+    print(f"Ingesting calendar -> dataset '{DS}' ...")
+    await cognee_client.remember_text(ics_to_memory_text(ics), dataset_name=DS)
 
-    print("Ingesting notes -> dataset 'notes' ...")
-    await cognee_client.remember_text(
-        notes_json_to_memory_text(notes), dataset_name="notes"
-    )
+    print(f"Ingesting notes -> dataset '{DS}' ...")
+    await cognee_client.remember_text(notes_json_to_memory_text(notes), dataset_name=DS)
 
-    print("Running improve() to enrich the graph across datasets ...")
-    await cognee_client.improve(["emails", "calendar", "notes"])
+    print(f"Running improve() to enrich the graph over '{DS}' ...")
+    await cognee_client.improve([DS])
 
     print("\nDatasets now on the tenant:")
     for d in await cognee_client.list_datasets():
