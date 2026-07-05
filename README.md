@@ -138,17 +138,6 @@ The React frontend is static (Vercel); the FastAPI backend is a long-running ser
 
 ---
 
-## 🎬 Demo
-
-See **[DEMO.md](DEMO.md)** for the full 2-minute script. The demo data (`demo_data/`) tells a cohesive product-team story - a Q3 marketing-budget decision across 5 emails, 2 calendar events, and 2 meeting notes - so recall can answer genuine **multi-hop** questions:
-
-- *"What was the final agreed marketing budget?"* → **$45k** (inferred across emails)
-- *"Who was responsible for influencer campaigns?"* → **Bob**
-- *"Where was the budget meeting held?"* → **Room 4B**
-- *"What were my action items from the sprint retro?"* → **follow up on the influencer contract**
-
----
-
 ## 🧩 Why it matters
 
 Your context lives scattered across inboxes, docs, and calendars. LLMs forget everything between sessions. LifeOS gives your AI a **persistent, self-improving memory** - so it wakes up in the meeting *with* the context, not without it.
