@@ -14,6 +14,7 @@ export default function GraphView() {
   const [data, setData] = useState(null)
   const [error, setError] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [resizeKey, setResizeKey] = useState(0)
   const holderRef = useRef(null)
   const svgRef = useRef(null)
   const selectedRef = useRef(null)
@@ -40,6 +41,23 @@ export default function GraphView() {
       .catch(() => setError(true))
   }, [])
 
+  // Re-run the layout (with fresh dimensions) when the container resizes, so the
+  // graph stays bounded to the current viewport.
+  useEffect(() => {
+    const holder = holderRef.current
+    if (!holder || typeof ResizeObserver === 'undefined') return
+    let t
+    const ro = new ResizeObserver(() => {
+      clearTimeout(t)
+      t = setTimeout(() => setResizeKey((k) => k + 1), 200)
+    })
+    ro.observe(holder)
+    return () => {
+      clearTimeout(t)
+      ro.disconnect()
+    }
+  }, [])
+
   useEffect(() => {
     const holder = holderRef.current
     const svgEl = svgRef.current
@@ -58,6 +76,10 @@ export default function GraphView() {
       .force('link', d3.forceLink(links).id((d) => d.id).distance(70).strength(0.4))
       .force('charge', d3.forceManyBody().strength(-160))
       .force('center', d3.forceCenter(W / 2, H / 2))
+      // Gentle pull toward center so the graph stays gathered in the viewport
+      // instead of sprawling past the edges.
+      .force('x', d3.forceX(W / 2).strength(0.06))
+      .force('y', d3.forceY(H / 2).strength(0.06))
       .force('collide', d3.forceCollide(22))
 
     const link = svg
@@ -111,19 +133,33 @@ export default function GraphView() {
       .attr('font-size', 9)
       .attr('font-family', "'IBM Plex Mono', monospace")
 
+    // Keep every node (and room for its label) inside the viewport so nothing
+    // spills under the sidebar or off-screen.
+    const PAD = 24
+    const LABEL_W = 130
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+    const label = node.select('text')
     const redraw = () => {
+      nodes.forEach((d) => {
+        d.x = clamp(d.x, PAD, W - PAD)
+        d.y = clamp(d.y, PAD, H - PAD)
+      })
       link
         .attr('x1', (d) => d.source.x)
         .attr('y1', (d) => d.source.y)
         .attr('x2', (d) => d.target.x)
         .attr('y2', (d) => d.target.y)
       node.attr('transform', (d) => `translate(${d.x},${d.y})`)
+      // flip the label to the left when the node is near the right edge
+      label
+        .attr('x', (d) => (d.x > W - LABEL_W ? -13 : 13))
+        .attr('text-anchor', (d) => (d.x > W - LABEL_W ? 'end' : 'start'))
     }
     sim.on('tick', redraw)
     applyHighlight(selectedRef.current)
 
     return () => sim.stop()
-  }, [data, applyHighlight])
+  }, [data, applyHighlight, resizeKey])
 
   const connected = selected
     ? (data?.edges || [])
@@ -136,8 +172,8 @@ export default function GraphView() {
     : []
 
   return (
-    <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_320px]">
-      <div className="relative" style={{ background: 'radial-gradient(ellipse 70% 70% at 50% 45%, #12141c, #0B0D12)' }}>
+    <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_320px] overflow-hidden">
+      <div className="relative overflow-hidden" style={{ background: 'radial-gradient(ellipse 70% 70% at 50% 45%, #12141c, #0B0D12)' }}>
         <div className="absolute top-5 left-6 z-10 pointer-events-none">
           <h1 className="text-[18px] font-semibold text-mist">Memory Graph</h1>
           <p className="font-mono text-[11px] text-muted mt-0.5">click a node to inspect · drag to explore</p>
