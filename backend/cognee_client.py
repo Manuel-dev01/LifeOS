@@ -165,10 +165,51 @@ async def recall(
     """Query memory. Returns {'answer': str, 'sources': [{text, source, score}]}.
 
     The tenant runs GRAPH_COMPLETION once per dataset and its LLM serializes at
-    ~13s/call, so latency scales with the number of datasets. A single call over
-    all datasets is the tenant's own (serialized) fast path; keeping the vault
-    lean (few, meaningful datasets) is what keeps recall snappy.
+    ~13s/call, so a single all-datasets call costs (datasets x 13s) and can't
+    return until every dataset is done. Instead we walk datasets one at a time
+    and STOP at the first one that yields a real (non-hedge) answer, so a fact
+    living in an early dataset comes back in ~13s instead of ~85s. Datasets that
+    only hedge are cheap to skip past.
     """
+    if datasets:
+        return await _search_datasets(question, top_k, datasets)
+
+    names = await _dataset_names()
+    if len(names) <= 1:
+        return await _search_datasets(question, top_k, names or None)
+
+    collected: list[Any] = []
+    async with _client() as client:
+        for name in names:
+            try:
+                data = await _search_one(client, question, top_k, name)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("recall dataset '%s' failed: %s", name, e)
+                continue
+            items = data if isinstance(data, list) else ([data] if data else [])
+            collected.extend(items)
+            if _has_informative_answer(items):
+                break  # got a real answer — no need to pay for the rest
+    return _normalize_search(collected, question)
+
+
+async def _search_one(
+    client: httpx.AsyncClient, question: str, top_k: int, dataset: str
+) -> Any:
+    payload = {
+        "query": question,
+        "searchType": "GRAPH_COMPLETION",
+        "topK": top_k,
+        "datasets": [dataset],
+    }
+    resp = await client.post(_url("/search"), json=payload)
+    _raise_for_status(resp, "search")
+    return _json_or_empty(resp)
+
+
+async def _search_datasets(
+    question: str, top_k: int, datasets: Optional[list[str]]
+) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "query": question,
         "searchType": "GRAPH_COMPLETION",
@@ -181,6 +222,35 @@ async def recall(
         _raise_for_status(resp, "search")
         data = _json_or_empty(resp)
     return _normalize_search(data, question)
+
+
+def _has_informative_answer(items: list[Any]) -> bool:
+    for item in items:
+        raw = item.get("search_result", item) if isinstance(item, dict) else item
+        ans = _extract_answer(raw)
+        if ans and _is_informative(ans):
+            return True
+    return False
+
+
+# Short-lived cache of dataset names so recall doesn't re-list on every query.
+_ds_cache: dict[str, Any] = {"names": None, "at": 0.0}
+
+
+async def _dataset_names() -> list[str]:
+    import time
+
+    now = time.monotonic()
+    if _ds_cache["names"] is not None and now - _ds_cache["at"] < 30:
+        return _ds_cache["names"]
+    try:
+        names = [d["name"] for d in await list_datasets() if d.get("name")]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("dataset listing for recall failed: %s", e)
+        names = _ds_cache["names"] or []
+    _ds_cache["names"] = names
+    _ds_cache["at"] = now
+    return names
 
 
 async def search_structured(
