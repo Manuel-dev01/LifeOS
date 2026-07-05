@@ -13,7 +13,7 @@ export default function GraphSection() {
 
       <div className="relative z-10 max-w-2xl revl">
         <div className="font-mono text-[12px] tracking-[0.18em] text-lavender mb-5">
-          01 — THE GRAPH
+          01 · THE GRAPH
         </div>
         <h2
           className="font-sora font-bold text-mist-bright"
@@ -21,7 +21,7 @@ export default function GraphSection() {
         >
           Every fact you own,
           <br />
-          held in one place — and{' '}
+          held in one place, and{' '}
           <span className="font-light italic text-lavender">connected.</span>
         </h2>
         <p className="mt-6 text-[18px] leading-relaxed text-[#b9bece] max-w-lg">

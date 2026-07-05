@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { ingestText, ingestFile, ingestCalendar } from '../api'
+import { ingestFile, ingestCalendar } from '../api'
 
-const TABS = ['Text', 'File', 'Calendar']
+const TABS = ['File', 'Calendar']
 
-// Reusable "feed a real memory" panel — wired to the ingest endpoints.
+// Reusable "import a real memory" panel wired to the ingest endpoints.
+// Paste-text was removed intentionally: connecting an account is the primary
+// path; file/calendar import remains for one-off documents.
 export default function AddMemory({ onDone, dark = false }) {
-  const [tab, setTab] = useState('Text')
-  const [text, setText] = useState('')
+  const [tab, setTab] = useState('File')
   const [name, setName] = useState('')
   const [ics, setIcs] = useState('')
   const [file, setFile] = useState(null)
@@ -17,14 +18,12 @@ export default function AddMemory({ onDone, dark = false }) {
     setBusy(true)
     setMsg(null)
     try {
-      if (tab === 'Text' && text.trim()) await ingestText(text, name.trim() || 'notes')
-      else if (tab === 'File' && file) await ingestFile(file, name.trim() || 'upload')
+      if (tab === 'File' && file) await ingestFile(file, name.trim() || 'upload')
       else if (tab === 'Calendar' && ics.trim()) await ingestCalendar(ics, name.trim() || 'calendar')
       else {
         setBusy(false)
         return
       }
-      setText('')
       setIcs('')
       setFile(null)
       setMsg({ ok: true, text: 'Remembered ✓' })
@@ -61,15 +60,6 @@ export default function AddMemory({ onDone, dark = false }) {
         placeholder="vault name (optional)"
         className={`w-full mb-2 text-[12px] rounded-md border px-2 py-1.5 focus:outline-none focus:border-brand ${fieldBg}`}
       />
-      {tab === 'Text' && (
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={3}
-          placeholder="Paste an email, note, or any text to remember…"
-          className={`w-full text-[14px] rounded-md border px-3 py-2 resize-none focus:outline-none focus:border-brand ${fieldBg}`}
-        />
-      )}
       {tab === 'File' && (
         <input
           type="file"

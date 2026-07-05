@@ -18,11 +18,18 @@ import os
 import tempfile
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 import cognee_client
+import config
 import insights
+import token_store
 from config import FRONTEND_ORIGIN, assert_configured
+from connectors import google as gconn
+from connectors import notion as nconn
+from connectors import slack as sconn
 from ingestion import ics_to_memory_text
 from models import (
     CalendarReq,
@@ -41,7 +48,8 @@ app = FastAPI(title="LifeOS API", version="1.0.0", description="Personal AI Memo
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN, "http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=config.CORS_ORIGINS,
+    allow_origin_regex=config.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -232,3 +240,111 @@ async def graph() -> dict:
         return await insights.get_entity_graph()
     except Exception as e:  # noqa: BLE001
         raise _handle("graph", e)
+
+
+# ------------------------------ Connectors / OAuth ------------------------------ #
+# Google covers gmail/calendar/drive cards; notion/slack are their own providers.
+_GOOGLE_CARDS = ("gmail", "calendar", "drive")
+
+
+@app.get("/connectors")
+async def connectors() -> dict:
+    """Per-card connection + configuration status for the UI."""
+    google_on = token_store.is_connected("google")
+    return {
+        "gmail": {"provider": "google", "configured": config.google_configured(), "connected": google_on},
+        "calendar": {"provider": "google", "configured": config.google_configured(), "connected": google_on},
+        "drive": {"provider": "google", "configured": config.google_configured(), "connected": google_on},
+        "notion": {"provider": "notion", "configured": config.notion_configured(), "connected": token_store.is_connected("notion")},
+        "slack": {"provider": "slack", "configured": config.slack_configured(), "connected": token_store.is_connected("slack")},
+        "apple_notes": {"provider": None, "configured": False, "connected": False, "note": "No public API; use file import"},
+    }
+
+
+@app.get("/auth/{provider}/login")
+async def auth_login(provider: str):
+    try:
+        if provider == "google":
+            if not config.google_configured():
+                raise HTTPException(400, "Google not configured. Add GOOGLE_CLIENT_ID/SECRET to .env.local")
+            return RedirectResponse(gconn.login_url())
+        if provider == "notion":
+            if not config.notion_configured():
+                raise HTTPException(400, "Notion not configured.")
+            return RedirectResponse(nconn.login_url())
+        if provider == "slack":
+            if not config.slack_configured():
+                raise HTTPException(400, "Slack not configured.")
+            return RedirectResponse(sconn.login_url())
+        raise HTTPException(404, f"Unknown provider '{provider}'")
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        raise _handle("auth_login", e)
+
+
+@app.get("/auth/{provider}/callback")
+async def auth_callback(provider: str, code: str | None = None, error: str | None = None):
+    if error:
+        return RedirectResponse(f"{config.FRONTEND_APP_URL}?connect_error={error}")
+    if not code:
+        return RedirectResponse(f"{config.FRONTEND_APP_URL}?connect_error=missing_code")
+    try:
+        total = 0
+        if provider == "google":
+            creds = await run_in_threadpool(gconn.exchange_code, code)
+            fetched = await run_in_threadpool(gconn.fetch_all, creds)
+            for dataset, texts in fetched.items():
+                if texts:
+                    await cognee_client.remember_batch(texts, dataset)
+                    total += len(texts)
+        elif provider == "notion":
+            await nconn.exchange_code(code)
+            texts = await nconn.fetch_pages()
+            if texts:
+                await cognee_client.remember_batch(texts, "notion")
+                total += len(texts)
+        elif provider == "slack":
+            await sconn.exchange_code(code)
+            texts = await sconn.fetch_messages()
+            if texts:
+                await cognee_client.remember_batch(texts, "slack")
+                total += len(texts)
+        else:
+            return RedirectResponse(f"{config.FRONTEND_APP_URL}?connect_error=unknown_provider")
+
+        insights.invalidate()
+        return RedirectResponse(f"{config.FRONTEND_APP_URL}?connected={provider}&count={total}")
+    except Exception as e:  # noqa: BLE001
+        logger.exception("connect %s failed", provider)
+        return RedirectResponse(f"{config.FRONTEND_APP_URL}?connect_error={type(e).__name__}")
+
+
+@app.post("/connectors/{provider}/sync", response_model=StatusResp)
+async def connector_sync(provider: str) -> StatusResp:
+    """Re-fetch from an already-connected provider using the stored token."""
+    try:
+        if not token_store.is_connected(provider if provider != "gmail" else "google"):
+            raise HTTPException(400, f"{provider} is not connected")
+        total = 0
+        if provider in _GOOGLE_CARDS or provider == "google":
+            creds = await run_in_threadpool(gconn._credentials)
+            fetched = await run_in_threadpool(gconn.fetch_all, creds)
+            for dataset, texts in fetched.items():
+                if texts:
+                    await cognee_client.remember_batch(texts, dataset)
+                    total += len(texts)
+        elif provider == "notion":
+            texts = await nconn.fetch_pages()
+            await cognee_client.remember_batch(texts, "notion")
+            total += len(texts)
+        elif provider == "slack":
+            texts = await sconn.fetch_messages()
+            await cognee_client.remember_batch(texts, "slack")
+            total += len(texts)
+        insights.invalidate()
+        return StatusResp(status=f"Synced {total} items from {provider}")
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        raise _handle("connector_sync", e)

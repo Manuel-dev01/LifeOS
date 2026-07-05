@@ -15,7 +15,7 @@ const PILLARS = [
   },
   {
     title: 'Always cited',
-    body: 'Every answer shows the exact emails, meetings and notes it walked. No black box — you can always trace the path.',
+    body: 'Every answer shows the exact emails, meetings and notes it walked. No black box. You can always trace the path.',
     mt: 'md:mt-11',
     icon: (
       <>
@@ -26,7 +26,7 @@ const PILLARS = [
   },
   {
     title: 'Never resets',
-    body: 'Memory persists across infinite sessions. It compounds — the more you feed it, the sharper the connections become.',
+    body: 'Memory persists across infinite sessions. It compounds. The more you feed it, the sharper the connections become.',
     mt: 'md:mt-6',
     icon: (
       <path
@@ -45,7 +45,7 @@ export default function Pillars() {
       <div className="max-w-6xl mx-auto">
         <div className="revl mb-16">
           <div className="font-mono text-[12px] tracking-[0.18em] text-lavender mb-5">
-            03 — WHY IT HOLDS UP
+            03 · WHY IT HOLDS UP
           </div>
           <h2
             className="font-sora font-bold text-mist-bright max-w-2xl"

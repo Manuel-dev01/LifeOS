@@ -73,7 +73,7 @@ export default function AskView({ onOpenGraph }) {
                 <Logo size={40} />
                 <h2 className="text-[18px] font-semibold mt-4 mb-1">Ask your memory anything</h2>
                 <p className="text-[14px] text-[#8b90a0] max-w-sm mb-6">
-                  Every answer is walked from your real emails, meetings and notes — and cited.
+                  Every answer is walked from your real emails, meetings and notes, and cited.
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center max-w-md">
                   {SUGGESTIONS.map((s) => (

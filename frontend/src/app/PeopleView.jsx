@@ -49,7 +49,7 @@ export default function PeopleView({ onOpenPerson }) {
                   {p.initials || '?'}
                 </div>
                 <div className="text-[15px] font-semibold text-ink-900">{p.name}</div>
-                <div className="text-[12px] text-[#8b90a0] mb-3">{p.role || '—'}{p.org ? ` · ${p.org}` : ''}</div>
+                <div className="text-[12px] text-[#8b90a0] mb-3">{p.role || '·'}{p.org ? ` · ${p.org}` : ''}</div>
                 <div className="font-mono text-[11px] text-[#9aa3b2]">
                   {p.emails || 0} emails · {p.meetings || 0} meetings · {p.decisions || 0} decisions
                 </div>

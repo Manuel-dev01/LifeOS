@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 // elapsed time (loops every 11s) to avoid re-render churn.
 const QUESTION = 'When did I agree to the Q3 pricing change, and with who?'
 const ANSWER =
-  'You agreed to a 12% price uplift, effective Q3, in the Pricing sync with Dana on Mar 15 — confirmed in your decision log that evening.'
+  'You agreed to a 12% price uplift, effective Q3, in the Pricing sync with Dana on Mar 15, confirmed in your decision log that evening.'
 const LOOP = 11000
 
 const NODES = [
@@ -58,7 +58,7 @@ export default function DemoVideo() {
     >
       <div className="max-w-3xl mx-auto text-center mb-12 revl">
         <div className="font-mono text-[12px] tracking-[0.18em] text-lavender mb-4">
-          02 — SEE IT RECALL
+          02 · SEE IT RECALL
         </div>
         <h2
           className="font-sora font-bold text-mist-bright"

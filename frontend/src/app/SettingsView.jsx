@@ -64,7 +64,7 @@ export default function SettingsView({ onChange }) {
     setMsg(null)
     try {
       await improveMemory()
-      setMsg({ ok: true, text: 'Memory sharpened — graph re-enriched ✓' })
+      setMsg({ ok: true, text: 'Memory sharpened. Graph re-enriched ✓' })
       onChange?.()
     } catch {
       setMsg({ ok: false, text: 'Improve failed' })

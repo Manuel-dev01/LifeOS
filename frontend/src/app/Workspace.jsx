@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Onboarding from './Onboarding'
 import AskView from './AskView'
@@ -16,6 +17,8 @@ export default function Workspace() {
   const [datasets, setDatasets] = useState([])
   const [health, setHealth] = useState(null)
   const [activePerson, setActivePerson] = useState(null)
+  const [toast, setToast] = useState(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const refreshDatasets = useCallback(async () => {
     try {
@@ -32,6 +35,30 @@ export default function Workspace() {
       .then(({ data }) => setHealth(data))
       .catch(() => setHealth({ ok: false }))
   }, [refreshDatasets])
+
+  // Handle the OAuth redirect back from a connector.
+  useEffect(() => {
+    const connected = searchParams.get('connected')
+    const err = searchParams.get('connect_error')
+    if (connected) {
+      const count = searchParams.get('count')
+      setOnboarding(false)
+      setView('ask')
+      setToast({ ok: true, text: `${connected} connected${count ? ` · ${count} memories imported` : ''}` })
+      refreshDatasets()
+      setSearchParams({}, { replace: true })
+    } else if (err) {
+      setToast({ ok: false, text: `Connect failed: ${err}` })
+      setSearchParams({}, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   const openPerson = (name) => {
     setActivePerson(name)
@@ -75,6 +102,16 @@ export default function Workspace() {
           }}
           onDatasets={refreshDatasets}
         />
+      )}
+
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 rounded-xl px-4 py-3 text-[13px] text-white shadow-lg ${
+            toast.ok ? 'bg-meeting-dk' : 'bg-danger'
+          }`}
+        >
+          {toast.text}
+        </div>
       )}
     </div>
   )

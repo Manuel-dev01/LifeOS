@@ -5,7 +5,7 @@ export default function RecallFeature() {
         {/* left copy */}
         <div className="revl">
           <div className="font-mono text-[12px] tracking-[0.18em] text-brand mb-5">
-            02 — RECALL, NOT SEARCH
+            02 · RECALL, NOT SEARCH
           </div>
           <h2
             className="font-sora font-bold"
@@ -17,7 +17,7 @@ export default function RecallFeature() {
           </h2>
           <p className="mt-6 text-[18px] leading-relaxed text-[#565d6b] max-w-lg">
             No keywords, no folders, no scrolling. Ask the way you'd ask a colleague who
-            was in every meeting and read every email — and get an answer with the sources
+            was in every meeting and read every email, and get an answer with the sources
             it walked to get there.
           </p>
           <div className="mt-8 space-y-3 border-l-2 border-brand/30 pl-5">
@@ -64,7 +64,7 @@ export default function RecallFeature() {
               <span className="text-lavender font-medium">12% price uplift</span> effective
               Q3, during the{' '}
               <span className="text-meeting font-medium">Pricing sync on Mar 15</span> with
-              Dana — confirmed in your decision log the same day.
+              Dana, confirmed in your decision log the same day.
             </p>
             <div className="flex gap-2 mt-5">
               {['1 email', '1 meeting', '1 note'].map((c) => (

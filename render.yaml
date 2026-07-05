@@ -1,0 +1,45 @@
+# Render blueprint for the LifeOS FastAPI backend.
+# In Render: New +  ->  Blueprint  ->  point at this repo. Then set the secret
+# env vars (marked sync:false) in the dashboard. Frontend stays on Vercel.
+services:
+  - type: web
+    name: lifeos-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      # Cognee Cloud (use the underscore forms on Render — hyphens aren't valid keys)
+      - key: COGNEE_BASE_URL
+        sync: false
+      - key: COGNEE_API_KEY
+        sync: false
+      # Where the backend sends the browser after a successful connect
+      - key: FRONTEND_APP_URL
+        value: https://life-os-facing.vercel.app/app
+      # Allowed CORS origins (the *.vercel.app regex also covers previews)
+      - key: CORS_ORIGINS
+        value: https://life-os-facing.vercel.app
+      # Google (Gmail + Calendar + Drive). REDIRECT_URI must be THIS backend's URL.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false   # e.g. https://lifeos-backend.onrender.com/auth/google/callback
+      # Notion (optional)
+      - key: NOTION_CLIENT_ID
+        sync: false
+      - key: NOTION_CLIENT_SECRET
+        sync: false
+      - key: NOTION_REDIRECT_URI
+        sync: false
+      # Slack (optional)
+      - key: SLACK_CLIENT_ID
+        sync: false
+      - key: SLACK_CLIENT_SECRET
+        sync: false
+      - key: SLACK_REDIRECT_URI
+        sync: false

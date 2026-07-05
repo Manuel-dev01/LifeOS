@@ -94,6 +94,48 @@ Open **http://localhost:5173**.
 | DELETE | `/forget/{name}` | forget a dataset |
 | GET | `/datasets` | list memory vaults |
 | GET | `/health` | tenant connectivity |
+| GET | `/people` `/timeline` `/graph` | dynamic insights extracted from real memories |
+| GET | `/connectors` | connection status of each account |
+| GET | `/auth/{provider}/login` · `/callback` | OAuth connect (google/notion/slack) |
+
+---
+
+## 🔗 Connect your Gmail (real email ingestion)
+
+LifeOS can read your real emails (and Calendar + Drive) over Google OAuth, so you don't paste anything — connect once and ask.
+
+**One-time Google setup (~10 min):**
+1. **https://console.cloud.google.com** → new project → **APIs & Services → Library** → enable **Gmail API**, **Google Calendar API**, **Google Drive API**.
+2. **OAuth consent screen** → **External** → add app name + emails → add scopes `gmail.readonly`, `calendar.readonly`, `drive.readonly` → **Publish App** (Production, so anyone can connect; no test-user list).
+3. **Credentials → Create → OAuth client ID → Web application** → Authorized redirect URI `http://localhost:8000/auth/google/callback` → copy Client ID + Secret.
+4. Put them in `.env.local`:
+   ```ini
+   GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+   ```
+5. Restart the backend, open the app, click **Connect Gmail** → Google consent → your recent emails are ingested and instantly queryable.
+
+*(Notion and Slack work the same way with their own optional `NOTION_*` / `SLACK_*` credentials, see `.env.example`. Apple Notes has no public API, so its card imports a file instead.)*
+
+---
+
+## ☁️ Deploy (frontend on Vercel, backend on Render)
+
+The React frontend is static (Vercel); the FastAPI backend is a long-running server (Render) because Cognee's cognify/search calls take tens of seconds and don't fit serverless timeouts.
+
+**1. Backend → Render**
+- Render → **New → Blueprint** → pick this repo (uses `render.yaml`), or **New → Web Service** with Root Directory `backend`, build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+- Set env vars (dashboard): `COGNEE_BASE_URL`, `COGNEE_API_KEY`, `GOOGLE_CLIENT_ID/SECRET`, `FRONTEND_APP_URL=https://<your-vercel-app>/app`, `CORS_ORIGINS=https://<your-vercel-app>`, and the redirect URIs **pointing at the Render URL**, e.g. `GOOGLE_REDIRECT_URI=https://<your-render-app>.onrender.com/auth/google/callback`.
+- Note the backend URL Render gives you, e.g. `https://lifeos-backend.onrender.com`.
+
+**2. Update the OAuth consoles**
+- In Google (and Notion/Slack), set the **Authorized redirect URI** to the **Render** callback URL above (byte-for-byte). This is the #1 gotcha — the provider must send the code to the backend, not the frontend.
+
+**3. Frontend → Vercel**
+- Set project env var **`VITE_API_BASE_URL=https://<your-render-app>.onrender.com`** and redeploy. The app now calls the deployed backend; "Connect Gmail" flows through Render and returns to your Vercel app.
+
+Everything is env-driven, so the same code runs locally (`localhost`) and in production.
 
 ---
 

@@ -1,4 +1,4 @@
-// The LifeOS constellation mark — 3 spokes from a central node to satellites.
+// The LifeOS constellation mark: 3 spokes from a central node to satellites.
 export default function Logo({ size = 26, darkCenters = false }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none">

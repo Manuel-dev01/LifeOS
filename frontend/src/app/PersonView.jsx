@@ -35,9 +35,9 @@ export default function PersonView({ name, onBack }) {
               <div>
                 <h1 className="text-[24px] font-semibold text-ink-900">{person.name}</h1>
                 <p className="text-[13px] text-[#8b90a0]">
-                  {person.role || '—'}
+                  {person.role || '·'}
                   {person.org ? ` · ${person.org}` : ''}
-                  {person.first_met ? ` — first met ${person.first_met}` : ''}
+                  {person.first_met ? ` · first met ${person.first_met}` : ''}
                 </p>
               </div>
             </div>

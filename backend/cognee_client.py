@@ -89,6 +89,27 @@ async def remember_text(text: str, dataset_name: str = "text") -> dict[str, Any]
         return await _cognify(client, [dataset_name])
 
 
+async def remember_batch(texts: list[str], dataset_name: str) -> dict[str, Any]:
+    """Ingest many texts into one dataset with a SINGLE cognify at the end.
+
+    Used by connectors (e.g. 25 emails) so we don't pay a slow cognify per item.
+    Each text is added as its own .txt to /add, then one /cognify runs.
+    """
+    texts = [t for t in texts if t and t.strip()]
+    if not texts:
+        return {"status": "nothing to ingest", "count": 0}
+    async with _client() as client:
+        for i, text in enumerate(texts):
+            files = {"data": (f"{dataset_name}-{i}.txt", text.encode("utf-8"), "text/plain")}
+            add_resp = await client.post(
+                _url("/add"), data={"datasetName": dataset_name}, files=files
+            )
+            _raise_for_status(add_resp, "add(batch)")
+        result = await _cognify(client, [dataset_name])
+    result["count"] = len(texts)
+    return result
+
+
 async def remember_file(
     file_path: str, dataset_name: str = "file", filename: Optional[str] = None
 ) -> dict[str, Any]:

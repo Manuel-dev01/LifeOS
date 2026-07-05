@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-// 2D canvas particle network behind the hero — a drifting node/edge field that
+// 2D canvas particle network behind the hero: a drifting node/edge field that
 // reacts to the cursor. Ported from the mockup's _startHeroGraph.
 const TYPES = ['#6E68FF', '#5cbf9a', '#d9a24a', '#aab0c0']
 const LINK = 132

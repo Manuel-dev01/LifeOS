@@ -9,9 +9,9 @@ const PHRASES = [
 ]
 
 const SOURCES = [
-  'Email — "Re: Q3 pricing" · Mar 14',
-  'Meeting — Pricing sync · Mar 15',
-  'Note — "Decision log" · Mar 15',
+  'Email · "Re: Q3 pricing" · Mar 14',
+  'Meeting · Pricing sync · Mar 15',
+  'Note · "Decision log" · Mar 15',
 ]
 
 function useTypewriter(phrases) {
@@ -77,12 +77,6 @@ export default function Hero() {
 
       {/* headline */}
       <div className="absolute left-6 md:left-[6vw] top-[30%] max-w-2xl pointer-events-none">
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 mb-6">
-          <span className="h-1.5 w-1.5 rounded-full bg-lavender animate-pulseGlow" />
-          <span className="font-mono text-[11px] tracking-[0.18em] text-[#aab0c0]">
-            PERSONAL AI MEMORY VAULT
-          </span>
-        </div>
         <h1
           className="font-sora font-extrabold text-mist-bright"
           style={{
@@ -97,7 +91,7 @@ export default function Hero() {
           <span className="font-light italic text-lavender">forgets.</span>
         </h1>
         <p className="mt-6 text-[18px] md:text-[20px] leading-relaxed text-[#b9bece] max-w-xl">
-          Feed it your emails, notes and calendars. Ask anything — LifeOS answers by
+          Feed it your emails, notes and calendars. Ask anything. LifeOS answers by
           walking the memory graph it quietly built from your whole life.
         </p>
       </div>

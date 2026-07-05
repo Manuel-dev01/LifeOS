@@ -164,7 +164,7 @@ export default function GraphView() {
           )}
           {data && !data.nodes?.length && (
             <div className="absolute inset-0 flex items-center justify-center text-muted text-sm px-8 text-center">
-              No connections yet — add memories to grow your graph.
+              No connections yet. Add memories to grow your graph.
             </div>
           )}
         </div>

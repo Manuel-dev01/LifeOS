@@ -1,6 +1,10 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: 'http://localhost:8000' })
+// Base URL of the deployed FastAPI backend. Set VITE_API_BASE_URL in the Vercel
+// project (e.g. https://lifeos-backend.onrender.com); falls back to localhost.
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
+const api = axios.create({ baseURL: API_BASE })
 
 export const ingestText = (text, datasetName) =>
   api.post('/ingest/text', { text, dataset_name: datasetName })
@@ -36,5 +40,10 @@ export const getGraph = () => api.get('/graph')
 // Settings
 export const deleteVault = () => api.delete('/vault')
 export const exportVault = () => api.get('/export')
+
+// Connectors / OAuth
+export const getConnectors = () => api.get('/connectors')
+export const connectUrl = (provider) => `${API_BASE}/auth/${provider}/login`
+export const syncConnector = (provider) => api.post(`/connectors/${provider}/sync`)
 
 export default api

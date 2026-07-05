@@ -1,15 +1,16 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Logo, { Wordmark } from '../components/Logo'
 import AddMemory from './AddMemory'
-import { improveMemory, getDatasets } from '../api'
+import { improveMemory, getDatasets, getConnectors, connectUrl } from '../api'
 
+// key = the /connectors card key; provider = which OAuth flow to start.
 const SOURCES = [
-  { name: 'Gmail', detail: 'emails', connected: true, mark: '#D93025' },
-  { name: 'Calendar', detail: 'events', connected: true, mark: '#4A44E6' },
-  { name: 'Notion', detail: 'pages', connected: true, mark: '#13151B' },
-  { name: 'Slack', detail: 'Connect', connected: false, mark: '#611f69' },
-  { name: 'Apple Notes', detail: 'Connect', connected: false, mark: '#c08a34' },
-  { name: 'Drive', detail: 'Connect', connected: false, mark: '#4aa3d9' },
+  { key: 'gmail', provider: 'google', name: 'Gmail', detail: 'emails', mark: '#D93025' },
+  { key: 'calendar', provider: 'google', name: 'Calendar', detail: 'events', mark: '#4A44E6' },
+  { key: 'drive', provider: 'google', name: 'Drive', detail: 'docs', mark: '#4aa3d9' },
+  { key: 'notion', provider: 'notion', name: 'Notion', detail: 'pages', mark: '#13151B' },
+  { key: 'slack', provider: 'slack', name: 'Slack', detail: 'messages', mark: '#611f69' },
+  { key: 'apple_notes', provider: null, name: 'Apple Notes', detail: 'import file', mark: '#c08a34' },
 ]
 
 const BUILD_ROWS = [
@@ -22,7 +23,25 @@ export default function Onboarding({ onDone }) {
   const [step, setStep] = useState(0)
   const [pct, setPct] = useState(0)
   const [count, setCount] = useState(0)
+  const [conn, setConn] = useState({})
   const timer = useRef(null)
+
+  const loadConnectors = () =>
+    getConnectors()
+      .then(({ data }) => setConn(data))
+      .catch(() => {})
+
+  useEffect(() => {
+    loadConnectors()
+  }, [])
+
+  const handleConnect = (src) => {
+    if (!src.provider) return // apple_notes -> handled via import panel below
+    const state = conn[src.key]
+    if (state && !state.configured) return // setup required
+    // full-page redirect into the backend OAuth flow
+    window.location.href = connectUrl(src.provider)
+  }
 
   const build = async () => {
     setStep(1)
@@ -36,7 +55,7 @@ export default function Onboarding({ onDone }) {
       const { data } = await getDatasets()
       setCount(data.length)
     } catch {
-      /* still advance — build is best-effort */
+      /* still advance; build is best-effort */
     } finally {
       clearInterval(timer.current)
       setPct(100)
@@ -72,42 +91,60 @@ export default function Onboarding({ onDone }) {
               Connect your memory sources
             </h1>
             <p className="text-[16px] text-[#b9bece] mb-8 max-w-xl">
-              Pick what LifeOS should remember, or paste your own below. It reads once, then
-              keeps itself in sync. Nothing is shared or used to train shared models.
+              Connect an account and LifeOS reads it once, then keeps itself in sync.
+              Nothing is shared or used to train shared models.
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-              {SOURCES.map((s) => (
-                <div
-                  key={s.name}
-                  className={`rounded-2xl border p-4 ${
-                    s.connected
-                      ? 'border-white/[0.1] bg-[#151824]'
-                      : 'border-white/[0.06] bg-ink-card opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-[13px] font-bold" style={{ background: s.mark }}>
-                      {s.name[0]}
-                    </span>
-                    {s.connected && (
-                      <span className="h-5 w-5 rounded-full bg-lavender/20 text-lavender flex items-center justify-center text-[11px]">
-                        ✓
+              {SOURCES.map((s) => {
+                const state = conn[s.key] || {}
+                const connected = !!state.connected
+                const needsSetup = s.provider && !state.configured
+                const status = s.provider === null
+                  ? 'import file'
+                  : connected
+                  ? 'Connected'
+                  : needsSetup
+                  ? 'Setup required'
+                  : 'Connect'
+                return (
+                  <button
+                    key={s.key}
+                    onClick={() => handleConnect(s)}
+                    disabled={needsSetup}
+                    className={`text-left rounded-2xl border p-4 transition ${
+                      connected
+                        ? 'border-lavender/40 bg-[#151824]'
+                        : needsSetup
+                        ? 'border-white/[0.06] bg-ink-card opacity-60 cursor-not-allowed'
+                        : 'border-white/[0.1] bg-[#151824] hover:border-lavender/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-[13px] font-bold" style={{ background: s.mark }}>
+                        {s.name[0]}
                       </span>
-                    )}
-                  </div>
-                  <div className="text-[14px] font-medium">{s.name}</div>
-                  <div className="font-mono text-[11px] text-muted">{s.detail}</div>
-                </div>
-              ))}
+                      {connected && (
+                        <span className="h-5 w-5 rounded-full bg-lavender/20 text-lavender flex items-center justify-center text-[11px]">
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[14px] font-medium">{s.name}</div>
+                    <div className={`font-mono text-[11px] ${connected ? 'text-lavender' : 'text-muted'}`}>
+                      {status}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
 
             <details className="mb-8">
               <summary className="cursor-pointer text-[13px] text-lavender mb-3">
-                + Paste your own memory (email, note, calendar)
+                + Import a file instead (PDF, doc, calendar)
               </summary>
               <div className="mt-3">
-                <AddMemory dark />
+                <AddMemory dark onDone={loadConnectors} />
               </div>
             </details>
 
@@ -161,7 +198,7 @@ export default function Onboarding({ onDone }) {
               {count > 0
                 ? `${count} memory vault${count === 1 ? '' : 's'}, connected into one graph. `
                 : ''}
-              Ask it anything — it remembers so you don't have to.
+              Ask it anything. It remembers so you don't have to.
             </p>
             <button
               onClick={onDone}
