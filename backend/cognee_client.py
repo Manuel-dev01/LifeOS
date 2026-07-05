@@ -158,6 +158,19 @@ async def _cognify(
 
 # --------------------------------------------------------------------------- #
 # RECALL
+# Steers the tenant LLM toward a coherent, well-structured answer instead of a
+# scattered dump. Applied to every recall search.
+_RECALL_SYS = (
+    "You are the user's personal memory assistant. Answer the question directly "
+    "and coherently using ONLY the user's memories. Begin with a single sentence "
+    "that actually answers the question. If details help, follow with a few tight "
+    "markdown bullets, each starting with a short **bold label** then the detail. "
+    "Group related points; keep sub-items nested under their parent bullet. Include "
+    "concrete specifics (names, dates, amounts) from the memories. Be concise, do "
+    "not repeat yourself, and never invent anything not in the memories."
+)
+
+
 # --------------------------------------------------------------------------- #
 async def recall(
     question: str, top_k: int = 8, datasets: Optional[list[str]] = None
@@ -201,6 +214,7 @@ async def _search_one(
         "searchType": "GRAPH_COMPLETION",
         "topK": top_k,
         "datasets": [dataset],
+        "systemPrompt": _RECALL_SYS,
     }
     resp = await client.post(_url("/search"), json=payload)
     _raise_for_status(resp, "search")
@@ -214,6 +228,7 @@ async def _search_datasets(
         "query": question,
         "searchType": "GRAPH_COMPLETION",
         "topK": top_k,
+        "systemPrompt": _RECALL_SYS,
     }
     if datasets:
         payload["datasets"] = datasets
