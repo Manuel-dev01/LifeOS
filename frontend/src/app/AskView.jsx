@@ -17,7 +17,17 @@ const SOURCE_COLORS = { email: '#6E68FF', meeting: '#5cbf9a', note: '#d9a24a', u
 export default function AskView({ onOpenGraph, messages, setMessages, loading, setLoading }) {
   // Conversation + loading live in Workspace so the chat survives tab switches.
   const [input, setInput] = useState('')
+  // Respect the Settings "Always show sources" preference.
+  const [prefShowSources, setPrefShowSources] = useState(
+    () => localStorage.getItem('lifeos.showSources') !== '0'
+  )
   const scrollRef = useRef(null)
+
+  useEffect(() => {
+    const sync = () => setPrefShowSources(localStorage.getItem('lifeos.showSources') !== '0')
+    window.addEventListener('lifeos:prefs', sync)
+    return () => window.removeEventListener('lifeos:prefs', sync)
+  }, [])
   const lastSources = messages.filter((m) => m.role === 'assistant').slice(-1)[0]?.sources || []
 
   useEffect(() => {
@@ -91,7 +101,7 @@ export default function AskView({ onOpenGraph, messages, setMessages, loading, s
             )}
 
             {messages.map((m, i) => (
-              <Message key={i} m={m} onOpenGraph={onOpenGraph} />
+              <Message key={i} m={m} onOpenGraph={onOpenGraph} defaultShowSources={prefShowSources} />
             ))}
 
             {loading && (
@@ -136,8 +146,8 @@ export default function AskView({ onOpenGraph, messages, setMessages, loading, s
   )
 }
 
-function Message({ m, onOpenGraph }) {
-  const [showSources, setShowSources] = useState(true)
+function Message({ m, onOpenGraph, defaultShowSources = true }) {
+  const [showSources, setShowSources] = useState(defaultShowSources)
   if (m.role === 'user') {
     return (
       <div className="flex justify-end">
@@ -196,7 +206,7 @@ function Message({ m, onOpenGraph }) {
               onClick={onOpenGraph}
               className="mt-3 text-[12px] text-brand hover:underline"
             >
-              See how it connected →
+              Explore the memory graph →
             </button>
           </div>
         )}

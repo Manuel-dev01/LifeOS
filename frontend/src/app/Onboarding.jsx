@@ -99,7 +99,7 @@ export default function Onboarding({ onDone }) {
               Connect your memory sources
             </h1>
             <p className="text-[16px] text-[#b9bece] mb-8 max-w-xl">
-              Connect an account and LifeOS reads it once, then keeps itself in sync.
+              Connect an account and LifeOS reads it into your private memory graph.
               Nothing is shared or used to train shared models.
             </p>
 

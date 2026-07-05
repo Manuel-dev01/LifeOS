@@ -73,8 +73,8 @@ export default function GraphSection() {
           </div>
         ))}
       </div>
-      <div className="absolute right-6 md:right-[6vw] bottom-10 z-10 font-mono text-[11px] tracking-[0.14em] text-[#6b7180]">
-        MOVE TO ORBIT · 32,046 NODES
+      <div className="hidden md:block absolute right-6 md:right-[6vw] bottom-10 z-10 font-mono text-[11px] tracking-[0.14em] text-[#6b7180]">
+        DRAG TO ORBIT
       </div>
     </section>
   )

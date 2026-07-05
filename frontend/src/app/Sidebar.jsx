@@ -42,6 +42,16 @@ export default function Sidebar({ view, onNav, health, onReplayOnboarding, ident
   const name = me?.name || 'My vault'
   const initials = me?.initials || 'ME'
   const subtitle = me?.email || (me?.connected ? 'Connected' : 'Not connected yet')
+
+  // /health always returns ok:true while the process is up and reports tenant
+  // reachability in a sub-status; reflect that honestly (no blank count).
+  const tenantUp = health?.ok && health?.tenant !== 'unreachable'
+  const count = health?.dataset_count
+  const healthLabel = !health?.ok
+    ? 'offline'
+    : tenantUp
+    ? `${count ?? 0} vault${count === 1 ? '' : 's'} online`
+    : 'memory reconnecting'
   return (
     <aside
       className={`w-[230px] shrink-0 h-full flex flex-col bg-ink-side text-mist border-r border-white/[0.07]
@@ -78,10 +88,11 @@ export default function Sidebar({ view, onNav, health, onReplayOnboarding, ident
 
       <div className="px-3 pb-2">
         <div className="flex items-center gap-1.5 px-3 pb-3">
-          <span className={`h-1.5 w-1.5 rounded-full ${health?.ok ? 'bg-meeting' : 'bg-danger'}`} />
-          <span className="font-mono text-[10px] text-faint">
-            {health?.ok ? `${health.dataset_count ?? ''} vaults online` : 'offline'}
-          </span>
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ background: tenantUp ? '#5cbf9a' : health?.ok ? '#d9a24a' : '#ef4444' }}
+          />
+          <span className="font-mono text-[10px] text-faint">{healthLabel}</span>
         </div>
         <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-white/[0.03]">
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand to-lavender flex items-center justify-center text-[11px] font-semibold text-white shrink-0">

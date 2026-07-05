@@ -18,25 +18,20 @@ function Toggle({ on, onClick }) {
 }
 
 export default function SettingsView({ onChange }) {
-  const [localOnly, setLocalOnly] = useState(false)
   const [showSources, setShowSources] = useState(true)
   const [busy, setBusy] = useState(null)
   const [msg, setMsg] = useState(null)
 
   useEffect(() => {
-    setLocalOnly(localStorage.getItem('lifeos.localOnly') === '1')
     setShowSources(localStorage.getItem('lifeos.showSources') !== '0')
   }, [])
 
-  const toggleLocal = () => {
-    const v = !localOnly
-    setLocalOnly(v)
-    localStorage.setItem('lifeos.localOnly', v ? '1' : '0')
-  }
   const toggleSources = () => {
     const v = !showSources
     setShowSources(v)
     localStorage.setItem('lifeos.showSources', v ? '1' : '0')
+    // notify open views (AskView) so it reflects immediately
+    window.dispatchEvent(new Event('lifeos:prefs'))
   }
 
   const doExport = async () => {
@@ -94,16 +89,13 @@ export default function SettingsView({ onChange }) {
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-2xl mx-auto space-y-4">
           <div className="rounded-2xl bg-white border border-[#eceef3] p-5">
-            <div className="text-[15px] font-semibold text-ink-900 mb-1">Encryption</div>
+            <div className="text-[15px] font-semibold text-ink-900 mb-1">Your data, your control</div>
             <p className="text-[13px] text-[#565d6b]">
-              Your graph is encrypted at rest and in transit with keys only you hold. LifeOS
-              never uses your data to train shared models.
+              Your memories live in a private vault and are never used to train shared models.
+              Export everything or delete any memory, or your whole vault, at any time.
             </p>
           </div>
 
-          <Row title="Local-only mode" subtitle="Keep the graph on this device only">
-            <Toggle on={localOnly} onClick={toggleLocal} />
-          </Row>
           <Row title="Always show sources" subtitle="Every answer cites the memories it walked">
             <Toggle on={showSources} onClick={toggleSources} />
           </Row>

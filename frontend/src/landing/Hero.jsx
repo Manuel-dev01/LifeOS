@@ -96,9 +96,9 @@ export default function Hero() {
         </p>
       </div>
 
-      {/* floating query card */}
+      {/* floating query card (decorative — hidden on phones to avoid overlapping the headline) */}
       <div
-        className="absolute right-6 md:right-[6vw] bottom-[16%] w-[340px] max-w-[85vw] rounded-2xl border border-white/[0.08] p-5"
+        className="hidden md:block absolute right-6 md:right-[6vw] bottom-[16%] w-[340px] max-w-[85vw] rounded-2xl border border-white/[0.08] p-5"
         style={{
           background: 'rgba(18,20,28,0.72)',
           backdropFilter: 'blur(20px)',

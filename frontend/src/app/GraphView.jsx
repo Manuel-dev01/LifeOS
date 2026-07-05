@@ -206,31 +206,47 @@ export default function GraphView() {
         </div>
       </div>
 
-      {/* inspector — desktop only */}
+      {/* inspector — desktop column */}
       <div className="hidden lg:block bg-white border-l border-[#e2e4ea] p-6 overflow-y-auto">
-        {!selected ? (
-          <div className="text-[13px] text-[#8b90a0]">Select a node to inspect its connections.</div>
-        ) : (
-          <>
-            <div className="font-mono text-[10px] tracking-[0.14em] uppercase mb-2" style={{ color: TYPE_COLOR[selected.type] || '#8b90a0' }}>
-              {selected.type}
-            </div>
-            <h2 className="text-[18px] font-semibold text-ink-900 mb-4">{selected.label}</h2>
-            <div className="font-mono text-[10px] tracking-[0.14em] text-[#9aa3b2] mb-2">
-              CONNECTED TO
-            </div>
-            <div className="space-y-2">
-              {connected.length === 0 && <div className="text-[13px] text-[#8b90a0]">No connections.</div>}
-              {connected.map((c, i) => (
-                <div key={i} className="text-[13px]">
-                  <span className="text-ink-900">{c.label}</span>
-                  {c.rel && <span className="font-mono text-[10px] text-[#9aa3b2] ml-2">{c.rel}</span>}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+        <NodeDetails selected={selected} connected={connected} />
       </div>
+
+      {/* inspector — mobile bottom sheet (so node taps do something on phones) */}
+      {selected && (
+        <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 max-h-[55%] overflow-y-auto rounded-t-2xl bg-white border-t border-[#e2e4ea] p-5 shadow-[0_-20px_50px_-20px_rgba(0,0,0,0.4)]">
+          <button
+            onClick={() => setSelected(null)}
+            className="absolute top-3 right-4 text-[#9aa3b2] hover:text-ink-900 text-[18px] leading-none"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+          <NodeDetails selected={selected} connected={connected} />
+        </div>
+      )}
     </div>
+  )
+}
+
+function NodeDetails({ selected, connected }) {
+  if (!selected)
+    return <div className="text-[13px] text-[#8b90a0]">Select a node to inspect its connections.</div>
+  return (
+    <>
+      <div className="font-mono text-[10px] tracking-[0.14em] uppercase mb-2" style={{ color: TYPE_COLOR[selected.type] || '#8b90a0' }}>
+        {selected.type}
+      </div>
+      <h2 className="text-[18px] font-semibold text-ink-900 mb-4 pr-6">{selected.label}</h2>
+      <div className="font-mono text-[10px] tracking-[0.14em] text-[#9aa3b2] mb-2">CONNECTED TO</div>
+      <div className="space-y-2">
+        {connected.length === 0 && <div className="text-[13px] text-[#8b90a0]">No connections.</div>}
+        {connected.map((c, i) => (
+          <div key={i} className="text-[13px]">
+            <span className="text-ink-900">{c.label}</span>
+            {c.rel && <span className="font-mono text-[10px] text-[#9aa3b2] ml-2">{c.rel}</span>}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }

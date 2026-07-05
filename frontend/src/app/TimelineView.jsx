@@ -11,6 +11,16 @@ const KIND_COLOR = {
   event: '#8b86ff',
 }
 
+// The LLM sometimes returns full ISO timestamps; show a clean human date.
+function fmtDate(d) {
+  if (!d) return ''
+  const parsed = new Date(d)
+  if (!isNaN(parsed.getTime()) && /\d{4}-\d{2}-\d{2}|T\d{2}:/.test(String(d))) {
+    return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+  return d // already human, e.g. "Mar 15"
+}
+
 export default function TimelineView() {
   const [items, setItems] = useState(null)
   const [error, setError] = useState(false)
@@ -40,7 +50,7 @@ export default function TimelineView() {
                     style={{ background: KIND_COLOR[it.kind] || '#8b86ff' }}
                   />
                   <div className="font-mono text-[11px] text-[#9aa3b2] mb-1">
-                    {it.date} · {it.kind}
+                    {fmtDate(it.date)} · {it.kind}
                   </div>
                   <div
                     className="rounded-2xl bg-white border border-[#eceef3] p-4"

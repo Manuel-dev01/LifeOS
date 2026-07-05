@@ -90,14 +90,21 @@ async def health() -> dict:
 
 
 # ------------------------------ Ingest ------------------------------ #
+# Ingest runs the slow LLM-backed cognify; bound it like the other endpoints.
+_INGEST_TIMEOUT = 150.0
 @app.post("/ingest/text", response_model=StatusResp)
 async def ingest_text(req: IngestTextReq) -> StatusResp:
     try:
         # Everything lands in the single memory dataset (see config.MEMORY_DATASET)
-        # so recall + insights stay one bounded LLM call.
-        result = await cognee_client.remember_text(req.text, config.MEMORY_DATASET)
+        # so recall + insights stay one bounded LLM call. Bound the ingest so a
+        # slow cognify can't hang the request indefinitely.
+        result = await asyncio.wait_for(
+            cognee_client.remember_text(req.text, config.MEMORY_DATASET), timeout=_INGEST_TIMEOUT
+        )
         insights.invalidate()
         return StatusResp(status=f"Remembered into '{config.MEMORY_DATASET}'", detail=result)
+    except asyncio.TimeoutError:
+        raise HTTPException(504, "Still building that memory; it may take a moment to appear.")
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_text", e)
 
@@ -112,11 +119,16 @@ async def ingest_file(
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(await file.read())
             tmp_path = tmp.name
-        result = await cognee_client.remember_file(
-            tmp_path, dataset_name=config.MEMORY_DATASET, filename=file.filename
+        result = await asyncio.wait_for(
+            cognee_client.remember_file(
+                tmp_path, dataset_name=config.MEMORY_DATASET, filename=file.filename
+            ),
+            timeout=_INGEST_TIMEOUT,
         )
         insights.invalidate()
         return StatusResp(status=f"Remembered file into '{config.MEMORY_DATASET}'", detail=result)
+    except asyncio.TimeoutError:
+        raise HTTPException(504, "Still building that memory; it may take a moment to appear.")
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_file", e)
     finally:
@@ -127,12 +139,21 @@ async def ingest_file(
 @app.post("/ingest/calendar", response_model=StatusResp)
 async def ingest_calendar(req: CalendarReq) -> StatusResp:
     try:
-        memory_text = ics_to_memory_text(req.ics_text)
+        try:
+            memory_text = ics_to_memory_text(req.ics_text)
+        except Exception:  # malformed ICS is bad user input, not a gateway error
+            raise HTTPException(400, "Could not parse that calendar file. Is it valid .ics?")
         if not memory_text.strip():
-            raise ValueError("No events parsed from ICS content.")
-        result = await cognee_client.remember_text(memory_text, config.MEMORY_DATASET)
+            raise HTTPException(400, "No events found in that calendar file.")
+        result = await asyncio.wait_for(
+            cognee_client.remember_text(memory_text, config.MEMORY_DATASET), timeout=_INGEST_TIMEOUT
+        )
         insights.invalidate()
         return StatusResp(status=f"Remembered calendar into '{config.MEMORY_DATASET}'", detail=result)
+    except asyncio.TimeoutError:
+        raise HTTPException(504, "Still building those events; they may take a moment to appear.")
+    except HTTPException:
+        raise
     except Exception as e:  # noqa: BLE001
         raise _handle("ingest_calendar", e)
 
@@ -251,11 +272,11 @@ _INSIGHT_TIMEOUT = 60.0
 async def people() -> list[dict]:
     try:
         return await asyncio.wait_for(insights.get_people(), timeout=_INSIGHT_TIMEOUT)
-    except asyncio.TimeoutError:
-        logger.warning("people: timed out (tenant slow)")
+    except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
+        # An empty vault (no 'memory' dataset yet) or a slow tenant should show
+        # an empty view, never a 502.
+        logger.warning("people: degraded (%s)", type(e).__name__)
         return []
-    except Exception as e:  # noqa: BLE001
-        raise _handle("people", e)
 
 
 @app.get("/people/{name}")
@@ -270,29 +291,26 @@ async def person(name: str) -> dict:
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001
-        raise _handle("person", e)
+        logger.warning("person: degraded (%s)", type(e).__name__)
+        raise HTTPException(status_code=404, detail=f"No memories about '{name}'")
 
 
 @app.get("/timeline")
 async def timeline() -> list[dict]:
     try:
         return await asyncio.wait_for(insights.get_timeline(), timeout=_INSIGHT_TIMEOUT)
-    except asyncio.TimeoutError:
-        logger.warning("timeline: timed out (tenant slow)")
+    except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
+        logger.warning("timeline: degraded (%s)", type(e).__name__)
         return []
-    except Exception as e:  # noqa: BLE001
-        raise _handle("timeline", e)
 
 
 @app.get("/graph")
 async def graph() -> dict:
     try:
         return await asyncio.wait_for(insights.get_entity_graph(), timeout=_INSIGHT_TIMEOUT)
-    except asyncio.TimeoutError:
-        logger.warning("graph: timed out (tenant slow)")
+    except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
+        logger.warning("graph: degraded (%s)", type(e).__name__)
         return {"nodes": [], "edges": []}
-    except Exception as e:  # noqa: BLE001
-        raise _handle("graph", e)
 
 
 # ------------------------------ Connectors / OAuth ------------------------------ #

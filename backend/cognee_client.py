@@ -99,15 +99,26 @@ async def remember_batch(texts: list[str], dataset_name: str) -> dict[str, Any]:
     texts = [t for t in texts if t and t.strip()]
     if not texts:
         return {"status": "nothing to ingest", "count": 0}
+    added, skipped = 0, 0
     async with _client() as client:
         for i, text in enumerate(texts):
             files = {"data": (f"{dataset_name}-{i}.txt", text.encode("utf-8"), "text/plain")}
-            add_resp = await client.post(
-                _url("/add"), data={"datasetName": dataset_name}, files=files
-            )
-            _raise_for_status(add_resp, "add(batch)")
+            try:
+                add_resp = await client.post(
+                    _url("/add"), data={"datasetName": dataset_name}, files=files
+                )
+                _raise_for_status(add_resp, "add(batch)")
+                added += 1
+            except Exception as e:  # noqa: BLE001 — tolerate a bad item, keep going
+                skipped += 1
+                logger.warning("remember_batch: skipping item %d: %s", i, e)
+        # Only a total failure is an error; otherwise cognify what we did add.
+        if added == 0:
+            raise CogneeError(f"All {len(texts)} items failed to add to '{dataset_name}'")
         result = await _cognify(client, [dataset_name])
-    result["count"] = len(texts)
+    result["count"] = added
+    if skipped:
+        result["skipped"] = skipped
     return result
 
 

@@ -55,7 +55,7 @@ export default function SourcesView({ datasets, onChange }) {
     <div className="h-full flex flex-col">
       <ViewHeader
         title="Sources"
-        subtitle="what LifeOS reads · kept in sync automatically"
+        subtitle="what LifeOS reads · click Sync to pull the latest"
         right={
           <button
             onClick={() => setShowAdd((s) => !s)}
