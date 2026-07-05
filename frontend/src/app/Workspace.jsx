@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import Logo, { Wordmark } from '../components/Logo'
 import Sidebar from './Sidebar'
 import Onboarding from './Onboarding'
 import AskView from './AskView'
@@ -19,6 +20,7 @@ export default function Workspace() {
   const [activePerson, setActivePerson] = useState(null)
   const [toast, setToast] = useState(null)
   const [identityKey, setIdentityKey] = useState(0)
+  const [navOpen, setNavOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const refreshDatasets = useCallback(async () => {
@@ -70,31 +72,61 @@ export default function Workspace() {
   const nav = (v) => {
     setActivePerson(null)
     setView(v)
+    setNavOpen(false)
   }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-paper-2 text-ink-900">
+      {/* mobile drawer backdrop */}
+      {navOpen && (
+        <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setNavOpen(false)} />
+      )}
+
       <Sidebar
         view={view}
         onNav={nav}
         health={health}
         identityKey={identityKey}
-        onReplayOnboarding={() => setOnboarding(true)}
+        mobileOpen={navOpen}
+        onClose={() => setNavOpen(false)}
+        onReplayOnboarding={() => {
+          setOnboarding(true)
+          setNavOpen(false)
+        }}
       />
 
-      <main className="flex-1 min-w-0 bg-paper overflow-hidden flex flex-col">
-        {view === 'ask' && <AskView onOpenGraph={() => nav('graph')} onOpenPerson={openPerson} />}
-        {view === 'graph' && <GraphView />}
-        {view === 'timeline' && <TimelineView />}
-        {view === 'people' && <PeopleView onOpenPerson={openPerson} />}
-        {view === 'person' && (
-          <PersonView name={activePerson} onBack={() => nav('people')} />
-        )}
-        {view === 'sources' && (
-          <SourcesView datasets={datasets} onChange={refreshDatasets} />
-        )}
-        {view === 'settings' && <SettingsView onChange={refreshDatasets} />}
-      </main>
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* mobile top bar */}
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-[#e2e4ea] bg-paper-2 shrink-0">
+          <button
+            onClick={() => setNavOpen(true)}
+            className="p-1.5 -ml-1.5 text-ink-900"
+            aria-label="Open menu"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <Logo size={20} />
+            <Wordmark className="text-[15px] text-ink-900" />
+          </div>
+        </div>
+
+        <main className="flex-1 min-w-0 bg-paper overflow-hidden flex flex-col">
+          {view === 'ask' && <AskView onOpenGraph={() => nav('graph')} onOpenPerson={openPerson} />}
+          {view === 'graph' && <GraphView />}
+          {view === 'timeline' && <TimelineView />}
+          {view === 'people' && <PeopleView onOpenPerson={openPerson} />}
+          {view === 'person' && (
+            <PersonView name={activePerson} onBack={() => nav('people')} />
+          )}
+          {view === 'sources' && (
+            <SourcesView datasets={datasets} onChange={refreshDatasets} />
+          )}
+          {view === 'settings' && <SettingsView onChange={refreshDatasets} />}
+        </main>
+      </div>
 
       {onboarding && (
         <Onboarding

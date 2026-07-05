@@ -139,11 +139,25 @@ async def ingest_calendar(req: CalendarReq) -> StatusResp:
 @app.post("/query", response_model=QueryResp)
 async def query(req: QueryReq) -> QueryResp:
     try:
-        result = await cognee_client.recall(req.question, top_k=req.top_k)
+        # Bound the recall so a degraded/slow tenant returns a clear message
+        # fast instead of hanging the UI for two minutes.
+        result = await asyncio.wait_for(
+            cognee_client.recall(req.question, top_k=req.top_k), timeout=55.0
+        )
         graph = None
         if req.include_graph:
             graph = cognee_client.graph_from_recall(req.question, result)
         return QueryResp(answer=result["answer"], sources=result["sources"], graph=graph)
+    except asyncio.TimeoutError:
+        logger.warning("query: recall timed out (tenant slow)")
+        return QueryResp(
+            answer=(
+                "Your memory service is responding slowly right now, so I couldn't "
+                "finish walking the graph. Please try again in a moment."
+            ),
+            sources=[],
+            graph=None,
+        )
     except Exception as e:  # noqa: BLE001
         raise _handle("query", e)
 

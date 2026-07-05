@@ -136,7 +136,7 @@ export default function GraphView() {
     : []
 
   return (
-    <div className="h-full grid grid-cols-[1fr_320px]">
+    <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_320px]">
       <div className="relative" style={{ background: 'radial-gradient(ellipse 70% 70% at 50% 45%, #12141c, #0B0D12)' }}>
         <div className="absolute top-5 left-6 z-10 pointer-events-none">
           <h1 className="text-[18px] font-semibold text-mist">Memory Graph</h1>
@@ -170,8 +170,8 @@ export default function GraphView() {
         </div>
       </div>
 
-      {/* inspector */}
-      <div className="bg-white border-l border-[#e2e4ea] p-6 overflow-y-auto">
+      {/* inspector — desktop only */}
+      <div className="hidden lg:block bg-white border-l border-[#e2e4ea] p-6 overflow-y-auto">
         {!selected ? (
           <div className="text-[13px] text-[#8b90a0]">Select a node to inspect its connections.</div>
         ) : (

@@ -91,7 +91,7 @@ export default function SettingsView({ onChange }) {
   return (
     <div className="h-full flex flex-col">
       <ViewHeader title="Settings & Privacy" subtitle="your memory is yours alone" />
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-2xl mx-auto space-y-4">
           <div className="rounded-2xl bg-white border border-[#eceef3] p-5">
             <div className="text-[15px] font-semibold text-ink-900 mb-1">Encryption</div>

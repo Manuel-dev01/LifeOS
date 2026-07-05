@@ -18,12 +18,12 @@ export default function PersonView({ name, onBack }) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="px-8 py-5 border-b border-[#e2e4ea]">
+      <div className="px-4 md:px-8 py-5 border-b border-[#e2e4ea]">
         <button onClick={onBack} className="text-[13px] text-brand hover:underline">
           ← People
         </button>
       </div>
-      <div className="max-w-2xl mx-auto px-8 py-8">
+      <div className="max-w-2xl mx-auto px-4 md:px-8 py-8">
         {!person && !error && <div className="h-40 rounded-2xl bg-[#eef0f4] animate-pulse" />}
         {error && <div className="text-danger text-sm">Couldn't load {name}.</div>}
         {person && (

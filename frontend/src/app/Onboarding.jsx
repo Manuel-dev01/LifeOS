@@ -74,12 +74,12 @@ export default function Onboarding({ onDone }) {
   return (
     <div className="absolute inset-0 z-40 bg-ink text-mist overflow-y-auto">
       {/* top bar */}
-      <div className="flex items-center justify-between px-8 py-5">
+      <div className="flex items-center justify-between px-4 md:px-8 py-5">
         <div className="flex items-center gap-2.5">
           <Logo size={24} />
           <Wordmark className="text-[17px]" />
         </div>
-        <div className="flex gap-5 font-mono text-[11px] tracking-[0.14em]">
+        <div className="hidden sm:flex gap-5 font-mono text-[11px] tracking-[0.14em]">
           {['01 CONNECT', '02 BUILD', '03 READY'].map((s, i) => (
             <span key={s} style={{ color: i === step ? '#8b86ff' : '#565d6b' }}>
               {s}
@@ -95,7 +95,7 @@ export default function Onboarding({ onDone }) {
         {step === 0 && (
           <div className="animate-fadeUp">
             <div className="font-mono text-[11px] tracking-[0.16em] text-lavender mb-3">STEP 01</div>
-            <h1 className="text-[36px] font-bold tracking-[-0.03em] mb-2">
+            <h1 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] mb-2">
               Connect your memory sources
             </h1>
             <p className="text-[16px] text-[#b9bece] mb-8 max-w-xl">

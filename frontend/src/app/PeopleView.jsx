@@ -24,7 +24,7 @@ export default function PeopleView({ onOpenPerson }) {
   return (
     <div className="h-full flex flex-col">
       <ViewHeader title="People" subtitle="the humans your memory revolves around" />
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         {!people && !error && (
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(230px,1fr))' }}>
             {[0, 1, 2, 3].map((i) => (

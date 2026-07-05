@@ -65,7 +65,7 @@ export default function SourcesView({ datasets, onChange }) {
           </button>
         }
       />
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-2xl mx-auto">
           {err && (
             <div className="mb-4 rounded-xl border border-danger/30 bg-danger/10 text-danger text-[13px] px-4 py-2.5 flex items-center justify-between">
